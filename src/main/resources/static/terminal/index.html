@@ -224,6 +224,11 @@
             animation: none;
         }
 
+        .tab-status.connecting {
+            background: var(--accent-orange);
+            animation: pulse 1s infinite;
+        }
+
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
@@ -265,6 +270,21 @@
         /* Xterm overrides */
         .xterm {
             padding: 8px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .terminal-wrapper {
+            height: 100%;
+            background: var(--bg-terminal);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .terminal-wrapper > div {
+            flex: 1;
+            min-height: 0;
         }
 
         .xterm-viewport::-webkit-scrollbar {
@@ -321,9 +341,13 @@
                     >
                         <template #label>
                             <span class="tab-label">
-                                <span class="tab-status" :class="{ disconnected: !tab.termReady }"></span>
+                                <span class="tab-status" :class="{
+                                    disconnected: tab.status === 'disconnected',
+                                    connecting: tab.status === 'connecting'
+                                }"></span>
                                 <span class="tab-name" :title="tab.name">{{ tab.name }}</span>
-                                <span class="tab-ping">{{ tab.ping }}ms</span>
+                                <span class="tab-ping" v-if="tab.status === 'connected'">{{ tab.ping }}ms</span>
+                                <span class="tab-ping" v-else-if="tab.status === 'connecting'">连接中...</span>
                             </span>
                         </template>
                         <div class="terminal-wrapper" :ref="el => tab.container = el"></div>
@@ -343,7 +367,6 @@
             const terminals = reactive([]);
             const activeTab = ref('');
             const radio1 = ref('终端');
-            const fitAddon = new window.FitAddon.FitAddon();
 
             const params = new URLSearchParams(window.location.search);
             const serverId = params.get('serverId');
@@ -367,6 +390,9 @@
             };
 
             const initTerm = (tab) => {
+                const fitAddon = new window.FitAddon.FitAddon();
+                tab.fitAddon = fitAddon;
+
                 const term = new Terminal({
                     lineHeight: 1.2,
                     fontSize: 12,
@@ -380,9 +406,18 @@
                 });
                 term.open(tab.container);
                 term.loadAddon(fitAddon);
-                fitAddon.fit();
                 term.write(`🔌 正在连接 ${tab.name}...\r\n`);
                 tab.term = term;
+
+                // 使用 ResizeObserver 确保容器尺寸正确后再 fit
+                const resizeObserver = new ResizeObserver(() => {
+                    fitAddon.fit();
+                    if (tab.term.cols > 0 && tab.term.rows > 0) {
+                        doResize(tab);
+                    }
+                });
+                resizeObserver.observe(tab.container);
+                tab.resizeObserver = resizeObserver;
             };
 
             const initWebSocket = (tab) => {
@@ -392,6 +427,8 @@
                 socket.onopen = () => {
                     tab.ping = 0;
                     tab.termReady = true;
+                    tab.status = 'connected';
+                    tab.sshConnected = true;
                     tab.reconnecting = false;
                     socket.send(encryptByAESFun(JSON.stringify({
                         operate: 'connect',
@@ -405,11 +442,21 @@
                 };
 
                 socket.onmessage = (event) => {
+                    // 收到服务器消息，确认连接已建立
+                    if (tab.status !== 'connected') {
+                        tab.status = 'connected';
+                        tab.sshConnected = true;
+                    }
                     tab.term.write(event.data);
                 };
 
-                socket.onerror = () => tab.term.write('\r\n❌ WebSocket 错误\r\n');
+                socket.onerror = () => {
+                    tab.status = 'disconnected';
+                    tab.termReady = false;
+                    tab.term.write('\r\n❌ WebSocket 错误\r\n');
+                };
                 socket.onclose = () => {
+                    tab.status = 'disconnected';
                     tab.termReady = false;
                     tab.term.write('\r\n🔌 连接关闭，按回车键重新连接\r\n');
                 };
@@ -473,7 +520,11 @@
                     container: null,
                     term: null,
                     socket: null,
+                    fitAddon: null,
+                    resizeObserver: null,
                     ping: 0,
+                    status: 'connecting',
+                    sshConnected: false,
                     termReady: false,
                     reconnecting: false,
                     heartbeatTimer: null
@@ -500,6 +551,9 @@
                 if (tab.heartbeatTimer) {
                     clearInterval(tab.heartbeatTimer);
                 }
+                if (tab.resizeObserver) {
+                    tab.resizeObserver.disconnect();
+                }
                 tab.term?.dispose();
                 tab.socket?.close();
                 terminals.splice(idx, 1);
@@ -513,6 +567,7 @@
                 if (tab.reconnecting) return;
 
                 tab.reconnecting = true;
+                tab.status = 'connecting';
                 tab.term.write('\r\n🔄 正在重新连接...\r\n');
 
                 // 清理旧连接
@@ -580,6 +635,16 @@
 
             onMounted(() => {
                 addTerminal();
+
+                // 监听窗口大小改变，重新 fit 所有终端
+                window.addEventListener('resize', () => {
+                    terminals.forEach(tab => {
+                        if (tab.term && tab.fitAddon) {
+                            tab.fitAddon.fit();
+                            doResize(tab);
+                        }
+                    });
+                });
             });
 
             return {
