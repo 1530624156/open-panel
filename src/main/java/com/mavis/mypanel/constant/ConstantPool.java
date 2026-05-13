@@ -2,9 +2,9 @@ package com.mavis.mypanel.constant;
 
 public class ConstantPool {
     /**
-     * 加密密钥
+     * 加密密钥 (128位，16字节)
      */
-    public static final String AES_PASSWORD = "IPUXV4/rLe8Uh9CKkHdORA==";
+    public static final String AES_PASSWORD = "mypanel_aes_key1";
     /**
      * 随机生成uuid的key名
      */

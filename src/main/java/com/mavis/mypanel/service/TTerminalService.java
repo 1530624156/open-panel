@@ -59,12 +59,12 @@ public class TTerminalService extends RemoteWebSocketHandler {
         if (StrUtil.isBlank(buffer)) {
             return;
         }
-        // 解密
+        // 解密，失败则使用明文
         try {
             buffer1 = AESUtils.decrypt(buffer, ConstantPool.AES_PASSWORD);
         } catch (Exception e) {
-            log.error("解密失败: {}", e.getMessage());
-            return;
+            log.warn("解密失败，使用明文: {}", e.getMessage());
+            buffer1 = buffer;
         }
 
         WebSSHData webSSHData;
@@ -95,15 +95,23 @@ public class TTerminalService extends RemoteWebSocketHandler {
         }else if (ConstantPool.WEBSSH_OPERATE_COMMAND.equals(webSSHData.getOperate())) {
             String command = webSSHData.getCommand();
             // 当前目录
-            if (sshConnectInfo != null) {
-                // 发送指令到站端
-                try {
-                    transToSSH(sshConnectInfo.getChannel(), command);
-                } catch (IOException e) {
-                    log.error("webssh连接异常");
-                    log.error("异常信息:{}", e.getMessage());
-                    close(sshConnectInfo);
-                }
+            if (sshConnectInfo == null) {
+                log.error("SSH连接信息不存在，请先建立连接");
+                return;
+            }
+            Channel channel = sshConnectInfo.getChannel();
+            if (channel == null || !channel.isConnected()) {
+                log.warn("SSH通道未建立或已断开，命令无法发送");
+                this.sendMessage(sshConnectInfo.getWebSocketSession(), "SSH通道未建立，请等待连接完成".getBytes());
+                return;
+            }
+            // 发送指令到站端
+            try {
+                transToSSH(channel, command);
+            } catch (IOException e) {
+                log.error("webssh连接异常");
+                log.error("异常信息:{}", e.getMessage());
+                close(sshConnectInfo);
             }
         }else if (ConstantPool.WEBSSH_OPERATE_RESIZE.equals(webSSHData.getOperate())) {
             // 修改 尺寸
@@ -145,20 +153,28 @@ public class TTerminalService extends RemoteWebSocketHandler {
         ServerLogic serverLogic = SpringUtil.getBean(ServerLogic.class);
         // 建立新会话
         Session session  = serverLogic.getSshSessionByServer(webLoginMap.get(sshConnectInfo.getTagId()));
+        if (session == null) {
+            throw new JSchException("无法建立SSH会话，请检查服务器配置");
+        }
         // 开启shell通道
         Channel channel = session.openChannel("shell");
         // 从继承类修改
         ChannelShell channelShell = (ChannelShell) channel;
-//        channelShell.setPtyType("xterm", 200, 48, 1920 , 1080);
         channelShell.setPtyType("xterm", 80, 24, 80*9 , 24*17);
         channel = channelShell;
         // 通道连接 超时时间10 s
         channel.connect(10000);
-        // 设置channel
+        // 设置channel - 必须在连接成功后才设置
         sshConnectInfo.setChannel(channel);
-        // 转发消息
-//        transToSSH(channel, "\r");
         sshConnectInfo.setSession(session);
+
+        // 连接成功后发送初始命令激活shell，获取初始输出
+        try {
+            transToSSH(channel, "\r");
+        } catch (IOException e) {
+            log.error("发送初始化命令失败: {}", e.getMessage());
+            throw e;
+        }
 
         // 读取终端返回的信息流
         InputStream inputStream = channel.getInputStream();
@@ -195,10 +211,11 @@ public class TTerminalService extends RemoteWebSocketHandler {
      * @throws IOException
      */
     private void transToSSH(Channel channel, String command) throws IOException {
-        if (channel != null) {
-            OutputStream outputStream = channel.getOutputStream();
-            outputStream.write(command.getBytes());
-            outputStream.flush();
+        if (channel == null) {
+            throw new IOException("SSH通道为空");
         }
+        OutputStream outputStream = channel.getOutputStream();
+        outputStream.write(command.getBytes());
+        outputStream.flush();
     }
 }
