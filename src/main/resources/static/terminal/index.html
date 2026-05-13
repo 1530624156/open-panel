@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8"/>
-    <title>Web 终端 - 模拟 1Panel</title>
+    <title>终端</title>
 
     <!-- Element Plus & Vue 3 -->
     <link href="../static/css/element-plus/index.css" rel="stylesheet"/>
@@ -16,125 +16,321 @@
 
     <script src="../static/js/crypto-js.min.js"></script>
     <style>
-        html {
-            height: 100%;
-            margin: 0;
-            padding: 0;
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-terminal: #000000;
+            --border-color: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-red: #f85149;
+            --accent-yellow: #d29922;
         }
-        body {
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
             height: 100%;
-            background: #1e1e1e;
             margin: 0;
             padding: 0;
-            color: #1e1e1e;
-            font-family: 'Segoe UI', sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            background: var(--bg-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            color: var(--text-primary);
         }
 
         #app {
             width: 100%;
             height: 100%;
-        }
-
-        .el-card{
-            .el-card__body{
-                border: none;
-                padding: 0;
-            }
-            background: #000000;
-            border: none;
-        }
-        .el-container {
-            margin-top: 20px;
-            height: 100%;
-        }
-        .terminal-wrapper {
-            height: calc(1.2em * 28); /* 行高 × 行数 */
-            width: 100%;
-            background-color: #000;
-            border-radius: 6px;
-            overflow: hidden;
-            padding: 10px;
-        }
-        .el-tabs{
-            .el-tabs__nav,
-            .el-tabs__item,
-            .el-tabs__active-bar,
-            .el-tabs__content,
-            .el-tabs__header {
-                border-color: #606266 !important;
-                border-bottom: 1px solid #606266;
-            }
-
-        }
-        .tab-label {
-            display: flex;
-            align-items: center;
-        }
-
-        .tab-label .ping {
-            font-size: 12px;
-            color: #67c23a;
-        }
-        .page-container {
             display: flex;
             flex-direction: column;
         }
 
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .page-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .page-title::before {
+            content: '';
+            width: 4px;
+            height: 16px;
+            background: var(--accent-blue);
+            border-radius: 2px;
+        }
+
         .page-content {
             flex: 1;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
-        .page-footer {
+        .terminal-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
+        .terminal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .terminal-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .terminal-dot.red { background: #ff5f56; }
+        .terminal-dot.yellow { background: #ffbd2e; }
+        .terminal-dot.green { background: #27c93f; }
+
+        .terminal-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .terminal-btn {
+            padding: 4px 10px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .terminal-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--accent-blue);
+            background: rgba(88, 166, 255, 0.1);
+        }
+
+        .terminal-tabs {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .terminal-tabs .el-tabs {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .terminal-tabs .el-tabs__header {
+            margin: 0;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .terminal-tabs .el-tabs__nav-wrap::after {
+            display: none;
+        }
+
+        .terminal-tabs .el-tabs__item {
+            height: 36px;
+            line-height: 36px;
+            padding: 0 16px;
+            color: var(--text-secondary);
+            background: var(--bg-secondary);
+            border: none;
+            border-right: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+
+        .terminal-tabs .el-tabs__item:hover {
+            color: var(--text-primary);
+            background: var(--bg-primary);
+        }
+
+        .terminal-tabs .el-tabs__item.is-active {
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            border-bottom: 2px solid var(--accent-blue);
+        }
+
+        .terminal-tabs .el-tabs__content {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .terminal-tabs .el-tab-pane {
+            height: 100%;
+        }
+
+        .terminal-tabs .el-tabs__nav {
+            border: none;
+        }
+
+        .terminal-wrapper {
+            height: 100%;
+            background: var(--bg-terminal);
+            overflow: hidden;
+        }
+
+        .tab-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .tab-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            animation: pulse 2s infinite;
+        }
+
+        .tab-status.disconnected {
+            background: var(--accent-red);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .tab-ping {
+            font-size: 11px;
+            color: var(--accent-green);
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+        }
+
+        .tab-name {
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .tab-close {
+            margin-left: 8px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .el-tabs__item:hover .tab-close,
+        .el-tabs__item.is-active .tab-close {
+            opacity: 1;
+        }
+
+        .tab-close:hover {
+            color: var(--accent-red) !important;
+        }
+
+        .el-divider {
+            margin: 0;
+            border-color: var(--border-color);
+        }
+
+        /* Xterm overrides */
+        .xterm {
+            padding: 8px;
+        }
+
+        .xterm-viewport::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .xterm-viewport::-webkit-scrollbar-track {
+            background: var(--bg-terminal);
+        }
+
+        .xterm-viewport::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        .xterm-viewport::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
     </style>
 </head>
 <body>
 <div id="app">
-    <div class="page-container">
-        <div class="page-content" style="margin: 20px 10px 20px 10px;" >
-            <div>
-                <el-card>
-                    <el-radio-group v-model="radio1">
-                        <el-radio-button  label="终端" value="终端" />
-                    </el-radio-group>
-                </el-card>
-            </div>
-            <div>
-                <el-container>
-                    <el-tabs
-                            v-model="activeTab"
-                            type="card"
-                            editable
-                            @tab-remove="removeTerminal"
-                            @tab-add="addTerminal"
-                            @tab-click="resizeTerminal"
-                            style="height: 100%;width: 100%;"
-                    >
-                        <el-tab-pane
-                                v-for="tab in terminals"
-                                :key="tab.id"
-                                :name="tab.id"
-                        >
-                            <template #label>
-                          <span class="tab-label">
-                            <span class="ping">{{ tab.ping }}ms ✅</span>
-                            <span>{{ tab.name }}</span>
-                          </span>
-                            </template>
-                            <div class="terminal-wrapper" :ref="el => tab.container = el"></div>
-                        </el-tab-pane>
-                    </el-tabs>
-                </el-container>
-            </div>
+    <div class="page-header">
+        <div class="page-title">终端</div>
+        <div class="terminal-actions">
+            <button class="terminal-btn" @click="addTerminal">+ 新建终端</button>
         </div>
     </div>
-    <!--    页面底部-->
-    <div class="page-footer">
-        <el-divider />
+    <div class="page-content">
+        <div class="terminal-container">
+            <div class="terminal-header">
+                <div class="terminal-dots">
+                    <span class="terminal-dot red"></span>
+                    <span class="terminal-dot yellow"></span>
+                    <span class="terminal-dot green"></span>
+                </div>
+                <div style="font-size: 12px; color: var(--text-secondary);">
+                    {{ terminals.length }} 个终端
+                </div>
+            </div>
+            <div class="terminal-tabs">
+                <el-tabs
+                        v-model="activeTab"
+                        type="card"
+                        closable
+                        @tab-remove="removeTerminal"
+                        @tab-add="addTerminal"
+                        @tab-click="resizeTerminal"
+                >
+                    <el-tab-pane
+                            v-for="tab in terminals"
+                            :key="tab.id"
+                            :name="tab.id"
+                    >
+                        <template #label>
+                            <span class="tab-label">
+                                <span class="tab-status" :class="{ disconnected: !tab.termReady }"></span>
+                                <span class="tab-name" :title="tab.name">{{ tab.name }}</span>
+                                <span class="tab-ping">{{ tab.ping }}ms</span>
+                            </span>
+                        </template>
+                        <div class="terminal-wrapper" :ref="el => tab.container = el"></div>
+                    </el-tab-pane>
+                </el-tabs>
+            </div>
+        </div>
     </div>
 </div>
 
