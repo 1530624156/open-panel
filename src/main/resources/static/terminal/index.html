@@ -392,6 +392,7 @@
                 socket.onopen = () => {
                     tab.ping = 0;
                     tab.termReady = true;
+                    tab.reconnecting = false;
                     socket.send(encryptByAESFun(JSON.stringify({
                         operate: 'connect',
                         tagId: tab.id
@@ -410,7 +411,7 @@
                 socket.onerror = () => tab.term.write('\r\n❌ WebSocket 错误\r\n');
                 socket.onclose = () => {
                     tab.termReady = false;
-                    tab.term.write('\r\n🔌 连接关闭\r\n');
+                    tab.term.write('\r\n🔌 连接关闭，按回车键重新连接\r\n');
                 };
 
                 tab.term.onData(data => {
@@ -420,6 +421,9 @@
                             tagId: tab.id,
                             command: data
                         })));
+                    } else if (!tab.reconnecting && data === '\r') {
+                        // 连接断开时，按回车重新连接
+                        reconnectTerminal(tab);
                     }
                 });
 
@@ -471,6 +475,7 @@
                     socket: null,
                     ping: 0,
                     termReady: false,
+                    reconnecting: false,
                     heartbeatTimer: null
                 };
                 terminals.push(tab);
@@ -501,6 +506,52 @@
                 if (terminals.length > 0) {
                     activeTab.value = terminals[Math.max(0, idx - 1)].id;
                 }
+            };
+
+            const reconnectTerminal = async (tab) => {
+                // 防止重复触发
+                if (tab.reconnecting) return;
+
+                tab.reconnecting = true;
+                tab.term.write('\r\n🔄 正在重新连接...\r\n');
+
+                // 清理旧连接
+                if (tab.heartbeatTimer) {
+                    clearInterval(tab.heartbeatTimer);
+                }
+                if (tab.socket) {
+                    tab.socket.close();
+                }
+
+                // 重新获取新的 tagId
+                try {
+                    const response = await fetch('../server/loginSSH', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: new URLSearchParams({ serverId })
+                    });
+                    const data = await response.json();
+                    if (data.result !== 1) {
+                        tab.term.write('❌ 重新连接失败\r\n');
+                        tab.reconnecting = false;
+                        return;
+                    }
+
+                    const res = data.data;
+                    tab.id = res.tagId;
+                    tab.name = res.name;
+                    tab.ping = 0;
+                    tab.termReady = false;
+                } catch (e) {
+                    tab.term.write('❌ 重新连接失败\r\n');
+                    tab.reconnecting = false;
+                    return;
+                }
+
+                // 重新初始化 WebSocket
+                initWebSocket(tab);
             };
 
             const handleResize = () => {
