@@ -4,149 +4,300 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>首页</title>
-    <link rel="stylesheet" href="./static/css/index.css">
-    <link rel="stylesheet" href="./static/css/reset.css">
-    <script src="./static/js/vue.js" type="text/javascript" charset="utf-8"></script>
-    <script src="./static/js/index.js" type="text/javascript" charset="utf-8"></script>
+    <title>登录 - OPEN-Panel</title>
+    <link rel="stylesheet" href="./static/css/element-plus/index.css">
+    <script src="./static/js/vue3/vue3.js" type="text/javascript" charset="utf-8"></script>
+    <script src="./static/js/element-plus/element-plus.js" type="text/javascript" charset="utf-8"></script>
     <script src="./static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
-    <script src="./static/js/My.js" type="text/javascript" charset="utf-8"></script>
     <style>
-        html,body{
-            background-color: gainsboro;
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-card: #1c2128;
+            --border-color: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
             height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
         }
-        #app{
-            position: relative;
+
+        #app {
             height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        div.main{
-            position: absolute;
-            width: 350px;
-            height: 250px;
-            border: 1px solid rgba(0,0,0,0.2);
-            border-radius: 8px;
-            box-shadow: 0 0 5px rgba(0,0,0,0.2);
-            background-color: white;
-            left: calc(50% - 175px);
-            top: calc(50% - 100px); 
-        }
-        div.main-top{
+
+        .login-container {
             width: 100%;
-            height: 40px;
-            border-bottom: 1px solid rgba(0,0,0,0.2);
+            max-width: 400px;
+            padding: 20px;
+        }
+
+        .login-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        .login-header {
             text-align: center;
-            font-size: 1.2em;
-            line-height: 40px;
+            margin-bottom: 32px;
         }
-        img.logo{
-            position: absolute;
-            left: 10px;
-            top: 5px;
-            height: 30px;
+
+        .login-logo {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-green));
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 32px;
         }
-        div.main-root{
+
+        .login-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .login-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .form-input {
             width: 100%;
-            height: 170px;
+        }
+
+        .form-input :deep(.el-input__wrapper) {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: none;
+            padding: 12px 16px;
+            transition: all 0.2s ease;
+        }
+
+        .form-input :deep(.el-input__wrapper:hover) {
+            border-color: var(--accent-blue);
+        }
+
+        .form-input :deep(.el-input__wrapper.is-focus) {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
+        }
+
+        .form-input :deep(.el-input__inner) {
+            color: var(--text-primary);
+            font-size: 14px;
+            height: 24px;
+        }
+
+        .form-input :deep(.el-input__inner::placeholder) {
+            color: var(--text-secondary);
+        }
+
+        .login-btn {
+            width: 100%;
+            height: 44px;
+            font-size: 16px;
+            font-weight: 500;
+            background: linear-gradient(135deg, var(--accent-blue), #409EFF);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 8px;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(88, 166, 255, 0.4);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .login-footer {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .login-footer a {
+            color: var(--accent-blue);
+            text-decoration: none;
+        }
+
+        .login-footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* 背景装饰 */
+        .bg-decoration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .bg-decoration::before {
+            content: '';
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(88, 166, 255, 0.1) 0%, transparent 70%);
+            top: -200px;
+            right: -200px;
+        }
+
+        .bg-decoration::after {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(63, 185, 80, 0.08) 0%, transparent 70%);
+            bottom: -150px;
+            left: -150px;
+        }
+
+        /* 动画 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-card {
+            animation: fadeIn 0.5s ease;
         }
     </style>
 </head>
 <body>
+    <div class="bg-decoration"></div>
     <div id="app">
-        <div class="main">
-            <div class="main-top">
-                <img :src="nav.logo" alt="" class="logo">
-                {{nav.title}}
-            </div>
-            <div class="main-root">
-                <el-row :gutter="0">
-                    <el-col :span="20" :offset="2" class="t-20">
-                        <el-input v-model="username" placeholder="" size="normal" clearable @change="">
-                            <template slot="prepend">账号</template>
-                        </el-input>
-                    </el-col>
-                </el-row>
-                <el-row :gutter="0">
-                    <el-col :span="20" :offset="2" class="t-20">
-                        <el-input v-model="password" type="password" placeholder="" size="normal" clearable @change="">
-                            <template slot="prepend">密码</template>
-                        </el-input>
-                    </el-col>
-                </el-row>
-                <el-row :gutter="0">
-                    <el-col :span="20" :offset="2" class="t-20">
-                        <el-button style="width: 100%;" type="success" size="default" @click="login">登录</el-button>
-                    </el-col>
-                </el-row>
-                
+        <div class="login-container">
+            <div class="login-card">
+                <div class="login-header">
+                    <div class="login-logo">📦</div>
+                    <h1 class="login-title">OPEN-Panel</h1>
+                    <p class="login-subtitle">主机管理与持续交付平台</p>
+                </div>
+
+                <div class="login-form">
+                    <div class="form-item">
+                        <label class="form-label">账号</label>
+                        <el-input
+                            class="form-input"
+                            v-model="username"
+                            placeholder="请输入账号"
+                            @keyup.enter="login"
+                        />
+                    </div>
+
+                    <div class="form-item">
+                        <label class="form-label">密码</label>
+                        <el-input
+                            class="form-input"
+                            v-model="password"
+                            type="password"
+                            placeholder="请输入密码"
+                            @keyup.enter="login"
+                        />
+                    </div>
+
+                    <button class="login-btn" @click="login">
+                        登 录
+                    </button>
+                </div>
+
+
             </div>
         </div>
     </div>
 
     <script>
-        var vue = new Vue({
-            el:'#app',
-            data:{
-                nav:{},
-                username:'',
-                password:''
-            },
-            methods: {
-                // type[success,warning,info,error]
-                myNotice(title,message,type){
-                    this.$notify({
-                        title,
-                        message,
-                        type,
-                        duration: 0
-                    });
-                },
-                // type[success,warning,info,error]
-                myMessage(type,message,duration){
-                    if(duration==undefined || duration==null){duration = 1500;}
-                    this.$message({type,message,duration});
-                },
-                myAlert(title,content,yesCb){
-                    this.$alert(content, title, {
-                        confirmButtonText: '确定',
-                        callback: ()=>{
-                            yesCb();
-                        }
-                    });
-                },
-                myConfirm(title,content,yesCb,noCb){
-                    this.$confirm(content, title, {
-                        confirmButtonText: '确定',
-                        cancelButtonText: '取消',
-                        callback: (e)=>{
-                            switch(e){
-                                case 'confirm':yesCb();break;
-                                case 'cancel':noCb();break;
-                            }
-                        }
-                    });
-                },
-                login(){
-                    $.post('user/login',{
-                        username:this.username,
-                        password:this.password
-                    },(data)=>{
-                        if(data.result == 1){
+        const { createApp, ref } = Vue;
+
+        createApp({
+            setup() {
+                const username = ref('');
+                const password = ref('');
+
+                const login = () => {
+                    if (!username.value) {
+                        alert('请输入账号');
+                        return;
+                    }
+                    if (!password.value) {
+                        alert('请输入密码');
+                        return;
+                    }
+                    $.post('user/login', {
+                        username: username.value,
+                        password: password.value
+                    }, (data) => {
+                        if (data.result == 1) {
                             window.location.href = './main.html';
-                        }else {
-                            this.myMessage('error',data.msg);
+                        } else {
+                            alert(data.msg || '登录失败');
                         }
-                    })
-                }
-            },
-        })
+                    });
+                };
 
-
-        $(()=>{
-            $.getJSON('./data/nav.json',(data)=>{
-                vue.nav = data;
-            })
-        })
+                return {
+                    username,
+                    password,
+                    login
+                };
+            }
+        }).use(ElementPlus).mount('#app');
     </script>
 </body>
 </html>
