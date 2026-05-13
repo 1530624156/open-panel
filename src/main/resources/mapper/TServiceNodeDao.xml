@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mavis.mypanel.dao.TServiceNodeDao">
+
+    <resultMap type="com.mavis.mypanel.entity.TServiceNode" id="TServiceNodeMap">
+        <result property="id" column="id" jdbcType="INTEGER"/>
+        <result property="serviceId" column="service_id" jdbcType="INTEGER"/>
+        <result property="dockerId" column="docker_id" jdbcType="INTEGER"/>
+        <result property="containerId" column="container_id" jdbcType="VARCHAR"/>
+        <result property="containerName" column="container_name" jdbcType="VARCHAR"/>
+        <result property="portMap" column="port_map" jdbcType="VARCHAR"/>
+        <result property="portWeb" column="port_web" jdbcType="INTEGER"/>
+        <result property="maxCpu" column="max_cpu" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <!-- 批量插入 -->
+    <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_service_node(service_iddocker_idcontainer_idcontainer_nameport_mapport_webmax_cpu)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+        (#{entity.serviceId}#{entity.dockerId}#{entity.containerId}#{entity.containerName}#{entity.portMap}#{entity.portWeb}#{entity.maxCpu})
+        </foreach>
+    </insert>
+    <!-- 批量插入或按主键更新 -->
+    <insert id="insertOrUpdateBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_service_node(service_iddocker_idcontainer_idcontainer_nameport_mapport_webmax_cpu)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.serviceId}#{entity.dockerId}#{entity.containerId}#{entity.containerName}#{entity.portMap}#{entity.portWeb}#{entity.maxCpu})
+        </foreach>
+        on duplicate key update
+service_id = values(service_id) docker_id = values(docker_id) container_id = values(container_id) container_name = values(container_name) port_map = values(port_map) port_web = values(port_web) max_cpu = values(max_cpu)     </insert>
+
+    <select id="selectServiceNodeVo" resultType="com.mavis.mypanel.entity.vo.TServiceNodeVo">
+        SELECT
+            u.name unit_name,
+            sg.name service_group_name,
+            sg.id service_group_id,
+            d.name docker_name,
+            d.ip docker_ip,
+            s.alias service_alias,
+            s.name service_name,
+            n.*
+        from t_service_node n,t_server_docker d,t_service s,t_unit u,t_service_group sg
+        WHERE n.docker_id = d.id
+          and s.unit_id = u.id
+          and s.group_id = sg.id
+          and n.service_id = s.id
+        <if test="unitName != null">
+            and u.name like '%'||#{unitName}||'%'
+        </if>
+        <if test="serviceGroupId != null">
+            and sg.id = #{serviceGroupId}
+        </if>
+        <if test="serviceAlias != null">
+            and s.alias like '%'||#{serviceAlias}||'%'
+        </if>
+    </select>
+
+    <select id="getServiceNodeNum" resultType="com.mavis.mypanel.entity.vo.TServiceNodeNumVo">
+        SELECT
+            service_id,
+            count( 1 ) AS num
+        FROM
+            t_service_node
+        GROUP BY
+            service_id
+    </select>
+</mapper>
+

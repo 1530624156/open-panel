@@ -1,0 +1,15 @@
+{
+	"title":"OPEN-Panel",
+	"logo":"./static/img/logo.png",
+	"person":{
+		"pic":"../static/images/icon.jpeg",
+		"name":"管理员"
+	},
+	"right_nav":[
+		{
+			"name":"退出登录",
+			"href":"user/logout"
+		}
+	],
+	"index":"./welcome.html"
+}

@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <script src="../static/js/My.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/index.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/echarts.min.js"></script>
+    <script src="./nginx.js" type="text/javascript" charset="utf-8"></script>
+    <!--    代码编辑器-->
+    <link rel="stylesheet" href="../static/tools/coder/codemirror.css">
+    <script src="../static/tools/coder/codemirror.min.js" charset="utf-8"></script>
+    <script src="../static/tools/coder/javascript.js" charset="utf-8"></script>
+
+
+    <title>Document</title>
+    <style>
+        div.configArea{
+            height: 500px;
+            overflow-y: scroll;
+        }
+        .title_button{
+            width: 100%;
+        }
+        .add-upstream,
+        .sub-upstream{
+            width: 100%;
+        }
+        .upstream_row{
+            margin-top: 5px;
+        }
+        .el-select{
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item v-for="o in menu_path">{{o}}</el-breadcrumb-item>
+                </el-breadcrumb>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="2" :offset="17">
+                <el-button type="success" size="small" @click="addConfig" class="title_button">添加</el-button>
+            </el-col>
+            <el-col :span="2">
+                <el-button type="warning" size="small" @click="testNginx" class="title_button">测试</el-button>
+            </el-col>
+            <el-col :span="2">
+                <el-button type="danger" size="small" @click="reloadNginx" class="title_button">重载</el-button>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-table :data="nginxConfigs" stripe border style="width: 100%" size="small">
+                    <el-table-column type="index" label="序号" width="60"></el-table-column>
+                    <el-table-column prop="fname" label="配置名称" width="180"></el-table-column>
+                    <el-table-column prop="path" label="配置路径"></el-table-column>
+                    <el-table-column label="大小" width="100">
+                        <template slot-scope="scope">
+                            {{getSize(scope.row.size)}}
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="lastModified" label="修改时间"></el-table-column>
+                    <el-table-column label="操作" width="180">
+                        <template slot-scope="scope">
+                            <el-button type="primary" size="mini" @click="editConfig(scope.row)">编辑</el-button>
+                            <el-button type="danger" size="mini" @click="deleteConfig(scope.row)">删除</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </el-col>
+        </el-row>
+
+
+        <el-dialog title="编辑nginx配置文件" :visible.sync="dialog_edit_config" width="80%">
+            <div class="configArea">
+                <textarea id="iframe_edit_config"></textarea>
+            </div>
+            <span slot="footer">
+            <el-button type="warning" size="small" @click="testNginx">测 试</el-button>
+            <el-button type="success" size="small" @click="saveConfig">保 存</el-button>
+        </span>
+        </el-dialog>
+
+<!--        新建配置文件-->
+        <el-dialog title="添加nginx配置文件" :visible.sync="dialog_add_config" width="50%">
+            <el-row :gutter="20">
+                <el-col :span="21" :offset="1">
+                    <p>Nginx节点</p>
+                    <el-select size="small" v-model="input_add_nodeid" multiple>
+                        <el-option
+                                v-for="node in nginxNodes"
+                                :label="node.name"
+                                :value="node.id">
+                        </el-option>
+                    </el-select>
+                </el-col>
+            </el-row>
+
+            <el-row :gutter="20" class="t-20">
+                <el-col :span="21" :offset="1">
+                    <p>配置文件名</p>
+                    <el-input v-model="input_add_fname" placeholder="xxxx.conf" size="small"></el-input>
+                </el-col>
+            </el-row>
+
+            <el-row :gutter="20" class="t-20">
+                <el-col :span="16" :offset="1">
+                    <p>监听地址(server_name)</p>
+                    <el-input v-model="input_add_server_name" placeholder="www.xxxx.cn" size="small"></el-input>
+                </el-col>
+                <el-col :span="5">
+                    <p>端口(port)</p>
+                    <el-input v-model="input_add_port" placeholder="80" size="small"></el-input>
+                </el-col>
+            </el-row>
+            <el-row :gutter="20" class="t-20">
+                <el-col :span="21" :offset="1">
+                    <p>负载均衡节点组(upstream)</p>
+                    <el-input v-model="input_add_upstream" placeholder="unit" size="small"></el-input>
+                </el-col>
+            </el-row>
+            <el-row :gutter="20" class="t-20">
+                <el-col :span="21" :offset="1">
+                    <el-row>
+                        <el-col :span="22">
+                            负载均衡节点
+                        </el-col>
+                        <el-col :span="2">
+                            <el-button type="success" size="mini" @click="add_upstream" class="add-upstream">+</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-row  v-for="node in input_upstreams" class="upstream_row">
+                        <el-col :span="14">
+                            <el-input v-model="node.host" placeholder="127.0.0.1" size="small"></el-input>
+                        </el-col>
+                        <el-col :span="6" :offset="1">
+                            <el-input v-model="node.port" placeholder="80" size="small"></el-input>
+                        </el-col>
+                        <el-col :span="2" :offset="1">
+                            <el-button type="danger" size="small" @click="del_upstream(node)" class="sub-upstream">-</el-button>
+                        </el-col>
+                    </el-row>
+                </el-col>
+            </el-row>
+            <span slot="footer">
+            <el-button type="success" size="small" @click="createByTemp">新 建</el-button>
+        </span>
+        </el-dialog>
+
+    </div>
+
+
+    <script>
+        var vue = new Vue({
+            el: '#app',
+            data: {
+                nodeId:getParam('id'),
+                menu_path: parent.vue_data.menu_path,
+                nginxNodes:[],
+                nginxConfigs:[],
+                dialog_edit_config:false,
+                dialog_add_config:false,
+                iframe_src_config:'',
+                editor:null,
+                input_edit_fname:'',
+
+                input_add_nodeid:[parseInt(getParam('id'))],
+                input_add_fname:'',
+                input_add_server_name:'',
+                input_add_upstream:'',
+                input_add_port:'',
+                input_upstreams:[{
+                    host:'',
+                    port:''
+                }]
+            },
+            methods: {
+                getConfigNameList(){
+                    $.post('./getServerConfigsNames',{
+                        nodeId:vue.nodeId
+                    },(data)=>{
+                        if(data.result == 1){
+                            vue.nginxConfigs = data.data;
+                        }
+                    })
+                },
+                getSize(size){
+                    return changeSize(size);
+                },
+                // 编辑nginx配置文件
+                editConfig(row){
+                    this.input_edit_fname = row.fname;
+                    vue.dialog_edit_config = true;
+                    this.getConfigByNodeIdConfigName(vue.nodeId,row.fname);
+                },
+                getConfigByNodeIdConfigName(nodeId,configName){
+                    $.post('./getNginxConfigs',{
+                        nodeId,
+                        configName
+                    },(data)=>{
+                        console.log(data);
+                        if(data.result == 1){
+                            vue.highLightConfig();
+                            vue.editor.setValue(data.data[configName]);
+                        }
+                    })
+                },
+                highLightConfig(){
+                    if(vue.editor == null){
+                        vue.editor = CodeMirror.fromTextArea(document.getElementById('iframe_edit_config'), {
+                            lineNumbers: true,     // 显示行数
+                            indentUnit: 4,         // 缩进单位为4
+                            styleActiveLine: true, // 当前行背景高亮
+                            matchBrackets: true,   // 括号匹配
+                            mode: "javascript",    // 设置编辑器语言为JavaScript
+                            lineWrapping: true,    // 自动换行
+                            theme: 'default'      // 使用default模版
+                        })
+                    }
+                },
+                saveConfig(){
+                    var content = vue.editor.getValue();
+                    $.post('./updateNginxConfig',{
+                        nodeId:vue.nodeId,
+                        fname:this.input_edit_fname,
+                        content
+                    },(data)=>{
+                        if(data.result == 1){
+                            this.myMessage('success',data.msg);
+                        }else {
+                            this.myMessage('error',data.msg);
+                        }
+                    });
+                },
+                testNginx(){
+                    $.post('./nginxAction',{
+                        nodeId:vue.nodeId,
+                        action:'test'
+                    },(data)=>{
+                        if(data.result == 1){
+                            this.myMessage('success',data.msg);
+                        }else {
+                            this.myMessage('error',data.msg);
+                        }
+                    })
+                },
+                reloadNginx(){
+                    $.post('./nginxAction',{
+                        nodeId:vue.nodeId,
+                        action:'reload'
+                    },(data)=>{
+                        if(data.result == 1){
+                            this.myMessage('success',data.msg);
+                        }else {
+                            this.myMessage('error',data.msg);
+                        }
+                    })
+                },
+                add_upstream(){
+                    vue.input_upstreams.push({
+                        host:'',
+                        port:''
+                    })
+                },
+                del_upstream(node){
+                    var index = vue.input_upstreams.indexOf(node);
+                    if(index > -1){
+                        vue.input_upstreams.splice(index,1);
+                    }
+                },
+                addConfig(){
+                    vue.dialog_add_config = true;
+                },
+                createByTemp(){
+                    $.post('./createNginxConfigByTemplate',{
+                        nodeIds:vue.input_add_nodeid.join(','),
+                        fname:vue.input_add_fname,
+                        serverName:vue.input_add_server_name,
+                        upstreamName:vue.input_add_upstream,
+                        serverPort:vue.input_add_port,
+                        upstreams:JSON.stringify(vue.input_upstreams)
+                    },(data)=>{
+                        if(data.result == 1){
+                            vue.myMessage('success',data.msg);
+                            vue.dialog_add_config = false;
+                            vue.getConfigNameList();
+                        }else {
+                            vue.myMessage('error',data.msg);
+                        }
+                    })
+                },
+                deleteConfig(row){
+                    vue.myConfirm('删除nginx配置文件','确定删除该nginx配置文件吗？',()=>{
+                        $.post('./deleteNginxConfig',{
+                            nodeId:vue.nodeId,
+                            fname:row.fname
+                        },(data)=>{
+                            if(data.result == 1){
+                                vue.myMessage('success',data.msg);
+                                vue.getConfigNameList();
+                            }else {
+                                vue.myMessage('error',data.msg);
+                            }
+                        })
+                    },()=>{
+
+                    })
+                },
+                getNginxNodes(){
+                    $.post('./getNginxNode',{
+                        name:vue.input_search_name
+                    },(data)=>{
+                        console.log(data)
+                        if(data.result == 1){
+                            vue.nginxNodes = data.data
+                        }
+                    })
+                },
+            }
+        })
+
+        $(()=>{
+            vue.menu_path.push('nginx配置');
+            vue.getNginxNodes();
+            vue.getConfigNameList();
+            elementUiNormalMethod(vue);
+        })
+
+    </script>
+</body>
+</html>

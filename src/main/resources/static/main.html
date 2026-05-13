@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta http-equiv="X-UA-Compatible" content="ie=edge">
+		<!-- 引入样式 -->
+		<link rel="stylesheet" href="./static/css/index.css">
+		<link rel="stylesheet" href="./static/css/reset.css">
+		<script src="./static/js/vue.js" type="text/javascript" charset="utf-8"></script>
+		<script src="./static/js/index.js" type="text/javascript" charset="utf-8"></script>
+		<script src="./static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
+		<script src="./static/js/My.js" type="text/javascript" charset="utf-8"></script>
+		<title></title>
+		<style>
+			html,
+			body,
+			#app{
+				height: 100%;
+			}
+			.el-header{
+				border-bottom: 1px solid rgba(0,0,0,0.1);
+			}
+			img.nav{
+				display: inline-block;
+				height: 40%;
+			}
+			img.logo{
+				height: 40px;
+				display: block;
+				line-height: 60px;
+				margin-top: 10px;
+				float: left;
+			}
+			em.header{
+				font-style: normal;
+				font-size: 1.2em;
+				line-height: 60px;
+				float: left;
+				margin-left: 20px;
+			}
+			main.el-main{
+				padding: 0;
+				border: 0;
+				overflow: hidden;
+			}
+			#iframe{
+				width: 100%;
+				height: 100%;
+				padding: 0;
+				border: 0;
+				margin: 0;
+			}
+			#menu-right{
+				line-height: 60px;
+			}
+			#menu-right:hover{
+				cursor: pointer;
+			}
+			.unFlexContainer {
+				height: calc(100% - 60px);
+				display: -webkit-box !important;
+			 }
+			.asideBar::-webkit-scrollbar{
+				display: none;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="app">
+			<el-container style="height: 100%;">
+				<el-header>
+					<el-col :span="22" :offset="0">
+						<img class="logo" :src="nav.logo" alt="">
+						<em class="header">
+							{{nav.title}}
+						</em>
+					</el-col>
+					<el-col :span="2" :offset="0">
+						<el-dropdown id="menu-right" trigger="click">
+							<span class="">
+							  更多<i class="el-icon-arrow-down el-icon--right"></i>
+							</span>
+							<el-dropdown-menu slot="dropdown">
+							  <el-dropdown-item @click.native="rightMenu" class="li-right-menu" v-for="o,i in nav.right_nav" :href="o.href">{{o.name}}</el-dropdown-item>
+							</el-dropdown-menu>
+						  </el-dropdown>
+					</el-col>
+					
+					
+					
+				</el-header>
+				<el-container class="unFlexContainer">
+					<el-aside width="200px" class="asideBar">
+						<el-menu
+							style="height: 100%;"
+							default-active="1"
+							class="el-menu-vertical-demo"
+							:default-openeds="['2','3','4','5','6']">
+							<div  v-for="o,i in menu">
+								<!-- 单级 -->
+								<el-menu-item v-if="o.secendMenu.length == 0" :index="(i+1).toString()" :o="JSON.stringify(o)">
+									<img class="nav" :src="o.icon" alt="">
+									<span slot="title">{{o.name}}</span>
+								</el-menu-item>
+
+								<!-- 多级 -->
+								<el-submenu v-else :index="(i+1).toString()" :o="JSON.stringify(o)">
+									<template slot="title">
+										<img class="nav" :src="o.icon" alt="">
+										<span slot="title">{{o.name}}</span>
+									</template>
+									<el-menu-item v-for="secend,ii of o.secendMenu" :index="(i+1).toString() + (ii+1).toString()" :o="JSON.stringify(secend)">
+										<img class="nav" :src="secend.icon" alt="">
+										<span slot="title">{{secend.name}}</span>
+									</el-menu-item>
+								</el-submenu>
+							</div>
+
+						</el-menu>
+					</el-aside>
+					<el-container>
+						<el-main>
+							<iframe id="iframe" src="" frameborder="0"></iframe>
+						</el-main>
+					</el-container>
+				</el-container>
+			</el-container>
+		</div>
+
+
+	<script type="text/javascript">
+		var vue_data = new Vue({
+				el: '#app',
+				data: {
+					nav:{},
+					menu:[],
+					menu_path:[]
+				},
+				methods: {
+					rightMenu(e){
+						var href = $(e.target).attr('href');
+						window.location = href;
+					},
+					getMenu(){
+						$.post('system/menu/list',(data)=>{
+							this.menu = data.data;
+						})
+					}
+				}
+			});
+
+		$.getJSON('./data/nav.json',(data)=>{
+			vue_data.nav = data;
+			$('title').text(data.title);
+			$('#iframe').attr('src',data.index);
+		})
+
+		vue_data.getMenu();
+
+		ckwt('.el-menu','.el-menu-item',function () {
+			var o = JSON.parse($(this).attr('o'));
+			$('#iframe').attr('src',o.href);
+
+			for(var i=0;i<$('.el-menu-item').length;i++){
+				var item = $('.el-menu-item')[i];
+				var icon = JSON.parse($(item).attr('o')).icon;
+				$(item).find('img').attr('src',icon);
+			}
+
+			var iconActive = JSON.parse($('.el-menu-item.is-active').attr('o')).iconActive;
+			$('.el-menu-item.is-active').find('img').attr('src',iconActive);
+
+			// 记录面包屑
+			vue_data.menu_path = [];
+			vue_data.menu_path.push('首页');
+			if(o.pid != 0 || o.pid == undefined){
+				var dir = getMenuById(o.pid);
+				vue_data.menu_path.push(dir.name);
+			}
+			vue_data.menu_path.push(o.name);
+		})
+
+		ckwt('body','li.li-right-menu',function () {
+		})
+
+
+		function getMenuById(id){
+			for(var menu of vue_data.menu){
+				if(menu.id == id){
+					return menu;
+				}
+			}
+		}
+	</script>
+	</body>
+</html>

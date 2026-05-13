@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <script src="../static/js/My.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/index.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
+    <script src="./nginx.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        .el-tag:hover{
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-breadcrumb separator="/">
+                <el-breadcrumb-item v-for="o in menu_path">{{o}}</el-breadcrumb-item>
+            </el-breadcrumb>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="8" :offset="1">
+            <el-input placeholder="名称" v-model="input_search_name" size="small" @change="" @keyup.enter.native="getNginxNodes">
+                <template slot="prepend">名称</template>
+            </el-input>
+        </el-col>
+        <el-col :span="3" :offset="8">
+            <el-button style="width: 100%;" type="primary" size="small" @click="getNginxNodes">搜索</el-button>
+        </el-col>
+        <el-col :span="3">
+            <el-button style="width: 100%;" type="success" size="small" @click="dialog_add = true">添加</el-button>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-table :data="nginxNodes"  border stripe size="small" >
+                <el-table-column width="50"  label="序号" type="index"></el-table-column>
+                <el-table-column width="150"  label="名称" prop="name"></el-table-column>
+                <el-table-column  label="服务地址">
+                    <template slot-scope="scope">
+                        <a :href="scope.row.serviceUrl" target="_blank">{{scope.row.serviceUrl}}</a>
+                    </template>
+                </el-table-column>
+                <el-table-column width="80"  label="部署方式" prop="deployType"></el-table-column>
+                <el-table-column width="50"  label="API版本" prop="apiVersion"></el-table-column>
+                <el-table-column width="80" label="状态">
+                    <template slot-scope="scope">
+                        <el-tag @click="getNginxNodeStatus(scope.row.id)" v-if="scope.row.status == -1" type="warning">未知</el-tag>
+                        <el-tag @click="getNginxNodeStatus(scope.row.id)" v-else-if="scope.row.status == 0" type="danger">异常</el-tag>
+                        <el-tag @click="getNginxNodeStatus(scope.row.id)" v-else type="success">正常</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column width="80" label="备注" prop="remark"></el-table-column>
+                <el-table-column label="操作">
+                    <template slot-scope="scope">
+                        <el-button type="defalut" size="mini" @click="configNginxNode(scope.row)">配置</el-button>
+                        <el-button type="primary" size="mini" @click="editNginxNode(scope.row)">编辑</el-button>
+                        <el-button type="danger" size="mini" @click="removeNginxNode(scope.row.id)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-col>
+    </el-row>
+
+<!--    添加节点 开始-->
+    <el-dialog
+            title="添加节点"
+            :visible.sync="dialog_add"
+            width="50%"
+            @close="">
+        <el-row :gutter="0">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_name" placeholder="" size="normal">
+                    <template slot="prepend">名称</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_serviceUrl" placeholder="http://xxx" size="normal">
+                    <template slot="prepend">服务地址</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_apiUrl" placeholder="http://xxx/mypanel_nginx" size="normal">
+                    <template slot="prepend">API地址</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <label>部署方式</label>
+                <el-select v-model="input_deployType" placeholder="请选择" size="normal" style="width: 100%">
+                    <el-option label="docker" value="docker"></el-option>
+                    <el-option label="直装" value="local"></el-option>
+                </el-select>
+            </el-col>
+        </el-row>
+<!--        容器-->
+        <el-row v-if="input_deployType == 'docker'" :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_dockerName" placeholder="" size="normal">
+                    <template slot="prepend">容器名称</template>
+                </el-input>
+            </el-col>
+        </el-row>
+<!--        直装-->
+        <el-row v-if="input_deployType == 'local'" :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_execPath" placeholder="/usr/local/nginx/sbin/nginx" size="normal">
+                    <template slot="prepend">可执行路径</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_confPath" placeholder="/usr/local/nginx/conf/xxx.conf" size="normal">
+                    <template slot="prepend">配置文件路径</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_remark" placeholder="" size="normal">
+                    <template slot="prepend">备注</template>
+                </el-input>
+            </el-col>
+        </el-row>
+<!--        健康检测-->
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_checkStatus" placeholder="/check_status" size="normal">
+                    <template slot="prepend">健康检测路径</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20" v-if="input_checkStatus != '' && input_checkStatus != undefined">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_checkStatusUsername" placeholder="" size="normal">
+                    <template slot="prepend">status 基础校验-账号(非必填)</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20" v-if="input_checkStatus != '' && input_checkStatus != undefined">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_checkStatusPassword" placeholder="" size="normal">
+                    <template slot="prepend">status 基础校验-密码(非必填)</template>
+                </el-input>
+            </el-col>
+        </el-row>
+
+        <span slot="footer">
+            <el-button type="success" @click="testByConfig">测 试</el-button>
+            <el-button type="primary" @click="addNginxNode">确 定</el-button>
+        </span>
+    </el-dialog>
+<!--    添加节点 结束-->
+
+
+    <!--    编辑节点 开始-->
+    <el-dialog
+            title="编辑节点"
+            :visible.sync="dialog_edit"
+            width="50%"
+            @close="">
+        <el-row :gutter="0">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_name" placeholder="" size="normal">
+                    <template slot="prepend">名称</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_serviceUrl" placeholder="http://xxx" size="normal">
+                    <template slot="prepend">服务地址</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_apiUrl" placeholder="http://xxx/mypanel_nginx" size="normal">
+                    <template slot="prepend">API地址</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <label>部署方式</label>
+                <el-select v-model="input_deployType" placeholder="请选择" size="normal" style="width: 100%">
+                    <el-option label="docker" value="docker"></el-option>
+                    <el-option label="直装" value="local"></el-option>
+                </el-select>
+            </el-col>
+        </el-row>
+        <!--        容器-->
+        <el-row v-if="input_deployType == 'docker'" :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_dockerName" placeholder="" size="normal">
+                    <template slot="prepend">容器名称</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <!--        直装-->
+        <el-row v-if="input_deployType == 'local'" :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_execPath" placeholder="/usr/local/nginx/sbin/nginx" size="normal">
+                    <template slot="prepend">可执行路径</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_confPath" placeholder="/usr/local/nginx/conf/xxx.conf" size="normal">
+                    <template slot="prepend">配置文件路径</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_remark" placeholder="" size="normal">
+                    <template slot="prepend">备注</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <!--        健康检测-->
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_checkStatus" placeholder="/check_status" size="normal">
+                    <template slot="prepend">健康检测路径</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20" v-if="input_checkStatus != '' && input_checkStatus != undefined">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_checkStatusUsername" placeholder="" size="normal">
+                    <template slot="prepend">status 基础校验-账号(非必填)</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20" v-if="input_checkStatus != '' && input_checkStatus != undefined">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_checkStatusPassword" placeholder="" size="normal">
+                    <template slot="prepend">status 基础校验-密码(非必填)</template>
+                </el-input>
+            </el-col>
+        </el-row>
+
+        <span slot="footer">
+            <el-button type="success" @click="testByConfig">测 试</el-button>
+            <el-button type="primary" @click="editNginxNodeSave">确 定</el-button>
+        </span>
+    </el-dialog>
+    <!--    编辑节点 结束-->
+
+</div>
+
+<script>
+    var vue = new Vue({
+        el: '#app',
+        data: {
+            menu_path: parent.vue_data.menu_path,
+            nginxNodes:[],
+            dialog_add:false,
+            dialog_edit:false,
+            // 搜索栏
+            input_search_name:'',
+            // 添加弹窗
+            input_name:'',
+            input_apiUrl:'',
+            input_deployType:'',
+            input_dockerName:'',
+            input_execPath:'',
+            input_confPath:'',
+            input_serviceUrl:'',
+            input_remark:'',
+            input_checkStatus:'',
+            input_checkStatusUsername:'',
+            input_checkStatusPassword:'',
+            // 编辑弹窗
+            input_id:''
+        },
+        methods:{
+            getNginxNodes(){
+                $.post('./getNginxNode',{
+                    name:vue.input_search_name
+                },(data)=>{
+                    console.log(data)
+                    if(data.result == 1){
+                        vue.nginxNodes = data.data
+                    }
+                })
+            },
+            addNginxNode(){
+                $.post('./addNginxNode',{
+                    name:vue.input_name,
+                    apiUrl:vue.input_apiUrl,
+                    deployType:vue.input_deployType,
+                    dockerName:vue.input_dockerName,
+                    execPath:vue.input_execPath,
+                    confPath:vue.input_confPath,
+                    serviceUrl:vue.input_serviceUrl,
+                    remark:vue.input_remark,
+                    checkStatus:vue.input_checkStatus,
+                    checkStatusUsername:vue.input_checkStatusUsername,
+                    checkStatusPassword:vue.input_checkStatusPassword
+                },(data)=>{
+                    if(data.result == 1){
+                        this.myMessage('success',data.msg)
+                        vue.dialog_add = false
+                        vue.getNginxNodes()
+                    }else{
+                        this.myMessage('error',data.msg)
+                    }
+                })
+            },
+            removeNginxNode(id){
+                $.post('./removeNginxNode',{
+                    id
+                },(data)=>{
+                    if(data.result == 1){
+                        this.myMessage('success',data.msg)
+                        vue.getNginxNodes()
+                    }else{
+                        this.myMessage('error',data.msg)
+                    }
+                })
+            },
+            testByConfig(){
+                $.post('./testByConfig',{
+                    apiUrl:vue.input_apiUrl,
+                    deployType:vue.input_deployType,
+                    dockerName:vue.input_dockerName,
+                    execPath:vue.input_execPath,
+                    confPath:vue.input_confPath
+                },(data)=>{
+                    if(data.result == 1){
+                        this.myMessage('success',data.msg)
+                    }else{
+                        this.myMessage('error',data.msg)
+                    }
+                    vue.getNginxNodes()
+                })
+            },
+            getNginxNodeStatus(id){
+                $.post('./testByNginxNodeId',{id},(data)=>{
+                    if(data.result == 1){
+                        this.myMessage('success',data.msg)
+                        vue.getNginxNodes()
+                    }else{
+                        this.myMessage('error',data.msg)
+                    }
+                })
+            },
+            editNginxNode(row){
+                vue.input_name = row.name;
+                vue.input_apiUrl = row.apiUrl;
+                vue.input_deployType = row.deployType;
+                vue.input_dockerName = row.dockerName;
+                vue.input_execPath = row.execPath;
+                vue.input_confPath = row.confPath;
+                vue.input_serviceUrl = row.serviceUrl;
+                vue.input_remark = row.remark;
+                vue.input_checkStatus = row.checkStatus;
+                vue.input_checkStatusUsername = row.checkStatusUsername;
+                vue.input_checkStatusPassword = row.checkStatusPassword;
+                vue.dialog_edit = true;
+                vue.input_id = row.id;
+            },
+            editNginxNodeSave(){
+                $.post('./updateNginxNode',{
+                    id:vue.input_id,
+                    name:vue.input_name,
+                    apiUrl:vue.input_apiUrl,
+                    deployType:vue.input_deployType,
+                    dockerName:vue.input_dockerName,
+                    execPath:vue.input_execPath,
+                    confPath:vue.input_confPath,
+                    serviceUrl:vue.input_serviceUrl,
+                    remark:vue.input_remark,
+                    checkStatus:vue.input_checkStatus,
+                    checkStatusUsername:vue.input_checkStatusUsername,
+                    checkStatusPassword:vue.input_checkStatusPassword
+                },(data)=>{
+                    if(data.result == 1){
+                        this.myMessage('success',data.msg)
+                        vue.dialog_edit = false
+                        vue.getNginxNodes()
+                    }else{
+                        this.myMessage('error',data.msg)
+                    }
+                })
+            },
+            configNginxNode(row){
+                jumpWithParams('./nginx_configs.html',{id:row.id});
+            }
+        }
+    })
+
+    elementUiNormalMethod(vue);
+    vue.getNginxNodes();
+</script>
+</body>
+</html>

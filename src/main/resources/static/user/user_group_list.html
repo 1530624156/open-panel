@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <script src="../static/js/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/index.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/My.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+<div id="app">
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-breadcrumb separator="/">
+                <el-breadcrumb-item v-for="o in menu_path">{{o}}</el-breadcrumb-item>
+            </el-breadcrumb>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="3" :offset="20">
+            <el-button style="width: 100%;" type="success" size="small" @click="addUserGroup()">添加</el-button>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-table :data="list" border stripe>
+                <el-table-column width="80" label="序号" type="index"></el-table-column>
+                <el-table-column width="150"  label="用户组名称" prop="name"></el-table-column>
+                <el-table-column width="80" label="用户数" prop="count"></el-table-column>
+                <el-table-column  label="权限">
+                    <template slot-scope="scope">
+                        <el-tag v-for="permission in JSON.parse(scope.row.permissions)"  type="success" size="mini" style="margin-right: 5px;">{{groupPermission[permission]}}</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column  label="操作" >
+                    <template slot-scope="scope">
+                        <el-button type="warning" size="mini" @click="setGroupLevel(scope.row)">权限</el-button>
+                        <el-button type="primary" size="mini" @click="getUserByGroupId(scope.row.id)">查看</el-button>
+                        <el-button type="danger" size="mini" @click="deleteUserGroup(scope.row)">删除</el-button>
+                    </template>
+                </el-table-column>
+                
+            </el-table>
+            
+        </el-col>
+    </el-row>
+
+
+    <!-- 用户组成员 开始 -->
+    <el-dialog
+           title="用户组成员"
+           :visible.sync="dialog_userGroupList"
+           width="70%"
+           @close="">
+<!--        选择用户-->
+        <el-row :gutter="0">
+            <el-col :span="18" :offset="0">
+                <el-select v-model="select_search_user" placeholder="选择用户" clearable multiple filterable size="mini" style="width: 100%">
+                    <el-option v-for="user in users" :label="user.name+'('+user.username+')'" :value="user.id"></el-option>
+                </el-select>
+            </el-col>
+            <el-col :span="4" :offset="2">
+                <el-button type="success" size="mini" @click="addGroupUser()" style="width: 100%">添加</el-button>
+            </el-col>
+        </el-row>
+
+<!--        用户组成员列表-->
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="24" :offset="0">
+                <el-table :data="groupUsers" border stripe>
+                    <el-table-column width="80"  label="序号" type="index"></el-table-column>
+                    <el-table-column  label="姓名" prop="name"></el-table-column>
+                    <el-table-column  label="用户名" prop="username"></el-table-column>
+                    <el-table-column  label="手机号" prop="tel"></el-table-column>
+                    <el-table-column  label="操作" >
+                        <template slot-scope="scope">
+                            <el-button type="danger" size="mini" @click="removeUserFromGroup(scope.row)">移出</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </el-col>
+        </el-row>
+        
+    </el-dialog>
+    <!-- 用户组成员 结束-->
+
+
+
+
+    <!-- 权限设置 开始-->
+    <el-dialog
+            title="权限设置"
+            :visible.sync="dialog_groupPermission"
+            width="70%"
+            @close="">
+        <!--        选择权限-->
+        <el-row :gutter="0">
+            <el-col :span="18" :offset="0">
+                <el-select v-model="select_search_permission" placeholder="选择权限" clearable multiple filterable size="mini" style="width: 100%">
+                    <el-option v-for="permission in Object.keys(groupPermission)" :label="groupPermission[permission]+'('+permission+')'" :value="permission"></el-option>
+                </el-select>
+            </el-col>
+            <el-col :span="4" :offset="2">
+                <el-button type="success" size="mini" @click="setGroupPermission()" style="width: 100%">添加</el-button>
+            </el-col>
+        </el-row>
+
+        <!--        用户组成员列表-->
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="24" :offset="0">
+                <el-table :data="groupPerminssionList" border stripe>
+                    <el-table-column width="80"  label="序号" type="index"></el-table-column>
+                    <el-table-column  label="权限内容">
+                        <template slot-scope="scope">
+                            <span>{{groupPermission[scope.row]}}</span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column  label="权限串">
+                        <template slot-scope="scope">
+                            <span>{{scope.row}}</span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column  label="操作" >
+                        <template slot-scope="scope">
+                            <el-button type="danger" size="mini" @click="removeGroupPermission(scope.row)">移出</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </el-col>
+        </el-row>
+
+    </el-dialog>
+</div>
+
+<script>
+    var vue = new Vue({
+        el:'#app',
+        data:{
+            menu_path:parent.vue_data.menu_path,
+            list:[],
+            users:[],
+            groupUsers:[],
+            dialog_userGroupList:false,
+            dialog_groupPermission:false,
+            select_search_user:'',
+            select_group_id:'',
+
+            // 权限设置
+            permissions_group_id:'',
+            groupPermission:{},
+            groupPerminssionList:[],
+            select_search_permission:''
+        },
+        methods:{
+            getUserGroupList(){
+                $.post('getUserGroupCount',(data)=>{
+                    if(data.result == 1){
+                        vue.list = data.data;
+                    }
+                })
+            },
+            getUserByGroupId(groupid){
+                vue.select_search_user = '';
+                vue.select_group_id = groupid;
+                $.post('getUserByGroupId',{groupId:groupid},(data)=>{
+                    if(data.result == 1){
+                        vue.groupUsers = data.data;
+                        vue.dialog_userGroupList = true;
+                    }else {
+                        this.myMessage('error',data.msg)
+                    }
+                })
+            },
+            addGroupUser(){
+                if(vue.select_search_user.length == 0){
+                    this.myMessage('error','请选择用户')
+                    return ;
+                }
+                $.post('addUser2Group',{
+                    groupId:vue.select_group_id,
+                    userIds:vue.select_search_user.join(',')
+                },(data)=>{
+                    if(data.result == 1){
+                        this.myMessage('success',data.msg)
+                        this.getUserByGroupId(vue.select_group_id)
+                        this.getUserGroupList()
+                    }else {
+                        this.myMessage('error',data.msg)
+                    }
+                })
+            },
+            removeUserFromGroup(row){
+                $.post('removeUserFromGroup',{
+                    groupId:vue.select_group_id,
+                    userId:row.id
+                },(data)=>{
+                    if(data.result == 1){
+                        this.myMessage('success',data.msg)
+                        this.getUserByGroupId(vue.select_group_id)
+                        this.getUserGroupList()
+                    }else {
+                        this.myMessage('error',data.msg)
+                    }
+                })
+            },
+            addUserGroup(){
+                this.myPrompt('添加用户组','请输入用户组名称',null,(val)=>{
+                    if(val == ''){
+                        this.myMessage('error','用户组名称不能为空');
+                    }else{
+                        $.post('addUserGroup',{name:val},(data)=>{
+                            if(data.result == 1){
+                                this.myMessage('success',data.msg);
+                                vue.getUserGroupList()
+                            }else{
+                                this.myMessage('error',data.msg);
+                            }
+                        })
+                    }
+                })
+            },
+            // 获取所有权限列表
+            getAllPermission(){
+                $.post('../system/permission/list',(data)=>{
+                    if(data.result == 1){
+                        vue.groupPermission = data.data;
+                    }
+                })
+            },
+            // 设置group的权限
+            setGroupLevel(row){
+                this.permissions_group_id = row.id;
+                this.groupPerminssionList = JSON.parse(row.permissions);
+                this.dialog_groupPermission = true;
+            },
+            setGroupPermission(){
+                $.post('../system/permission/addGroupPermission',{
+                    groupId:this.permissions_group_id,
+                    permissions:JSON.stringify(this.select_search_permission)
+                },(data)=>{
+                    if(data.result == 1){
+                        this.myMessage('success',data.msg);
+                        this.groupPerminssionList = data.data;
+                        vue.getUserGroupList();
+                    }else{
+                        this.myMessage('error',data.msg);
+                    }
+                })
+            },
+            getUserList(){
+                $.post('list',(data)=>{
+                    if(data.result == 1){
+                        this.users = data.data;
+                    }
+                })
+            },
+            removeGroupPermission(permission){
+                $.post('../system/permission/removeGroupPermission',{
+                    groupId:this.permissions_group_id,
+                    permission:permission
+                },(data)=>{
+                    if(data.result == 1){
+                        this.myMessage('success',data.msg);
+                        this.groupPerminssionList = data.data;
+                        vue.getUserGroupList();
+                    }else{
+                        this.myMessage('error',data.msg);
+                    }
+                })
+            },
+            deleteUserGroup(row){
+                this.myConfirm('删除确认', '此操作将永久删除该用户组, 是否继续?',()=>{
+                    $.post('deleteUserGroup',{id:row.id},(data)=>{
+                        if(data.result == 1){
+                            this.myMessage('success',data.msg);
+                            vue.getUserGroupList();
+                        }else{
+                            this.myMessage('error',data.msg);
+                        }
+                    })
+                },()=>{});
+            }
+
+        }
+    })
+    elementUiNormalMethod(vue);
+    vue.getUserGroupList();
+    vue.getUserList();
+    vue.getAllPermission();
+</script>
+</body>
+</html>

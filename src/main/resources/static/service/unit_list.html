@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <script src="../static/js/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/index.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/My.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        html,body{
+            width: 100%;
+            overflow-x: hidden;
+        }
+        #iframe_service{
+            width: 100%;
+            height: 700px;
+            border: 0;
+            overflow-y:scroll;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-breadcrumb separator="/">
+                <el-breadcrumb-item v-for="o in menu_path">{{o}}</el-breadcrumb-item>
+            </el-breadcrumb>
+        </el-col>
+    </el-row>
+
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="6" :offset="1">
+            <el-input placeholder="名称" v-model="input_search_name" size="small" @change="" @keyup.enter.native="getUnit">
+                <template slot="prepend">名称</template>
+            </el-input>
+        </el-col>
+        <el-col :span="6">
+            <el-input placeholder="名称" v-model="input_search_alias_name" size="small" @change="" @keyup.enter.native="getUnit">
+                <template slot="prepend">别名</template>
+            </el-input>
+        </el-col>
+        <el-col :span="6">
+            <el-select v-model="input_search_province" placeholder="省份" size="small" style="width: 100%" filterable >
+                <el-option label="不筛选省份" value=""></el-option>
+                <el-option v-for="o in provinceList" :key="o" :label="o" :value="o"></el-option>
+            </el-select>
+        </el-col>
+        <el-col :span="2">
+            <el-button style="width: 100%;" type="primary" size="small" @click="getUnit">搜索</el-button>
+        </el-col>
+        <el-col :span="2">
+            <el-button style="width: 100%;" type="success" size="small" @click="dialog_add = true">添加</el-button>
+        </el-col>
+    </el-row>
+
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-table :data="list"  border stripe size="small" v-loading="loading">
+                <el-table-column width="50"  label="序号" type="index"></el-table-column>
+                <el-table-column label="名称" prop="name"></el-table-column>
+                <el-table-column label="别名" prop="aliasName"></el-table-column>
+                <el-table-column label="租户类型">
+                    <template slot-scope="scope">
+                        <el-tag v-if="scope.row.type == 1" size="mini" type="default">个人</el-tag></el-tag>
+                        <el-tag v-if="scope.row.type == 2" size="mini" type="default">团队</el-tag></el-tag>
+                        <el-tag v-if="scope.row.type == 3" size="mini" type="default">企业</el-tag></el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column label="标签">
+                    <template slot-scope="scope">
+                        <el-tag v-for="o in parseUnitTag(scope.row)" :key="o.id" size="mini" type="success">{{o}}</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column label="省份" prop="province"></el-table-column>
+                <el-table-column label="备注" prop="remark"></el-table-column>
+                <el-table-column width="220" label="操作">
+                    <template slot-scope="scope">
+                        <el-button type="success" size="mini" @click="showUnitService(scope.row)">服务</el-button>
+                        <el-button type="primary" size="mini" @click="editUnit(scope.row)">编辑</el-button>
+                        <el-button type="danger" size="mini" @click="deleteUnit(scope.row)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-col>
+    </el-row>
+
+
+
+
+    <!--    添加节点 开始-->
+    <el-dialog
+            title="添加租户"
+            :visible.sync="dialog_add"
+            width="40%"
+            @close="">
+        <el-row :gutter="0">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_name" placeholder="" size="small">
+                    <template slot="prepend">名称</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_alias_name" placeholder="" size="small">
+                    <template slot="prepend">别名</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-select v-model="input_type" placeholder="租户类型" size="small" style="width: 100%">
+                    <el-option label="个人" value="1"></el-option>
+                    <el-option label="团队" value="2"></el-option>
+                    <el-option label="企业" value="3"></el-option>
+                </el-select>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_tag" placeholder="" size="small">
+                    <template slot="prepend">标签(空格分隔)</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-select v-model="input_province" placeholder="省份" size="small" style="width: 100%" filterable >
+                    <el-option v-for="o in provinceList" :key="o" :label="o" :value="o"></el-option>
+                </el-select>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_remark" placeholder="" size="small">
+                    <template slot="prepend">备注</template>
+                </el-input>
+            </el-col>
+        </el-row>
+
+
+        <span slot="footer">
+            <el-button type="primary" size="small" @click="addUnit">确 定</el-button>
+        </span>
+    </el-dialog>
+    <!--    添加节点 结束-->
+
+
+    <!--    添加节点 开始-->
+    <el-dialog
+            title="编辑租户"
+            :visible.sync="dialog_edit"
+            width="40%"
+            @close="">
+        <el-row :gutter="0">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_edit_name" placeholder="" size="small">
+                    <template slot="prepend">名称</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_edit_alias_name" placeholder="" size="small">
+                    <template slot="prepend">别名</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-select v-model="input_edit_type" placeholder="租户类型" size="small" style="width: 100%">
+                    <el-option label="个人" value="1"></el-option>
+                    <el-option label="团队" value="2"></el-option>
+                    <el-option label="企业" value="3"></el-option>
+                </el-select>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_edit_tag" placeholder="" size="small">
+                    <template slot="prepend">标签(空格分隔)</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-select v-model="input_edit_province" placeholder="省份" size="small" style="width: 100%" filterable >
+                    <el-option v-for="o in provinceList" :key="o" :label="o" :value="o"></el-option>
+                </el-select>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_edit_remark" placeholder="" size="small">
+                    <template slot="prepend">备注</template>
+                </el-input>
+            </el-col>
+        </el-row>
+
+
+        <span slot="footer">
+            <el-button type="primary" size="small" @click="saveUnit">保 存</el-button>
+        </span>
+    </el-dialog>
+    <!--    添加节点 结束-->
+
+
+
+    <el-dialog
+            title="租户服务"
+            :visible.sync="dialog_unit_service"
+            width="90%"
+            @close="">
+        <iframe :src="ifreame_url" id="iframe_service"></iframe>
+
+    </el-dialog>
+
+</div>
+
+<script>
+    var vue = new Vue({
+        el: '#app',
+        data:{
+            menu_path:parent.vue_data.menu_path,
+            loading:false,
+            input_search_name:'',
+            input_search_alias_name:'',
+            input_search_province:'',
+            list:[],
+
+            dialog_add:false,
+            input_name:'',
+            input_alias_name:'',
+            input_type:'',
+            input_tag:'',
+            input_province:'',
+            input_remark:'',
+
+            dialog_edit:false,
+            input_edit_name:'',
+            input_edit_alias_name:'',
+            input_edit_type:'',
+            input_edit_tag:'',
+            input_edit_province:'',
+            input_edit_remark:'',
+            input_edit_id:'',
+
+            provinceList:[],
+
+            dialog_unit_service:false,
+            ifreame_url:''
+        },
+        methods:{
+            getUnit(){
+                $.post('getUnits',{
+                    name:vue.input_search_name,
+                    aliasName:vue.input_search_alias_name,
+                    province:vue.input_search_province
+                },(data)=>{
+                    if(data.result == 1){
+                        vue.list = data.data;
+                    }
+                })
+            },
+            parseUnitTag(row){
+                var arr = [];
+                if(row.tag == '' || row.tag == null){
+                    return arr;
+                }
+                if(row.tag.indexOf(',') == -1){
+                    arr.push(row.tag);
+                }else {
+                    arr = row.tag.split(',');
+                }
+                return arr;
+            },
+            addUnit(){
+                $.post('addUnit',{
+                    name:vue.input_name,
+                    aliasName:vue.input_alias_name,
+                    type:vue.input_type,
+                    tag:vue.input_tag,
+                    province:vue.input_province,
+                    remark:vue.input_remark
+                },(data)=>{
+                    if(data.result == 1){
+                        vue.dialog_add = false;
+                        this.myMessage('success',data.msg);
+                        vue.getUnit();
+                    }else {
+                        this.myMessage('error',data.msg);
+                    }
+                })
+            },
+            deleteUnit(row){
+                this.myConfirm('确认','确定删除该租户?',()=>{
+                    $.post('deleteUnit',{
+                        id:row.id
+                    },(data)=>{
+                        if(data.result == 1){
+                            this.myMessage('success',data.msg);
+                            vue.getUnit();
+                        }else {
+                            this.myMessage('error',data.msg);
+                        }
+                    })
+                },()=>{})
+            },
+            editUnit(row){
+                this.input_edit_id = row.id;
+                this.input_edit_name = row.name;
+                this.input_edit_alias_name = row.aliasName;
+                this.input_edit_type = row.type+'';
+                this.input_edit_tag = row.tag;
+                this.input_edit_province = row.province;
+                this.input_edit_remark = row.remark;
+
+                this.dialog_edit = true;
+            },
+            saveUnit(){
+                $.post('updateUnit',{
+                    id:vue.input_edit_id,
+                    name:vue.input_edit_name,
+                    aliasName:vue.input_edit_alias_name,
+                    type:vue.input_edit_type,
+                    tag:vue.input_edit_tag,
+                    province:vue.input_edit_province,
+                    remark:vue.input_edit_remark
+                },(data)=>{
+                    if(data.result == 1){
+                        vue.dialog_edit = false;
+                        this.myMessage('success',data.msg);
+                        vue.getUnit();
+                    }else {
+                        this.myMessage('error',data.msg);
+                    }
+                })
+            },
+            getProvinceList(){
+                $.post('../other/provinceList',(data)=>{
+                    if(data.result == 1){
+                        vue.provinceList = data.data;
+                    }
+                })
+            },
+            showUnitService(row){
+                vue.ifreame_url = './services.html?unitId='+row.id;
+                vue.dialog_unit_service = true;
+            }
+        }
+    });
+    elementUiNormalMethod(vue);
+    vue.getUnit();
+    vue.getProvinceList();
+
+
+</script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <script src="../static/js/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/index.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/My.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        html,body{
+            width: 100%;
+            overflow-x: hidden;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-breadcrumb separator="/">
+                <el-breadcrumb-item v-for="o in menu_path">{{o}}</el-breadcrumb-item>
+            </el-breadcrumb>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            Jenkins地址
+        </el-col>
+        <el-col :span="22" :offset="1">
+            <el-input v-model="jenkinsUrl" placeholder="Jenkins地址" size="small"></el-input>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            Jenkins账号
+        </el-col>
+        <el-col :span="22" :offset="1">
+            <el-input v-model="username" placeholder="账号" size="small"></el-input>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            Jenkins密码
+        </el-col>
+        <el-col :span="22" :offset="1">
+            <el-input v-model="password" placeholder="密码" size="small"></el-input>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-40">
+        <el-col :span="2" :offset="19">
+            <el-button style="width: 100%" type="warning" size="small" @click="testJenkins">测试</el-button>
+        </el-col>
+        <el-col :span="2" :offset="0">
+            <el-button style="width: 100%" type="primary" size="small" @click="saveJenkinsSetting">保存</el-button>
+        </el-col>
+    </el-row>
+
+</div>
+
+<script>
+    var vue = new Vue({
+        el: '#app',
+        data:{
+            menu_path:parent.vue_data.menu_path,
+            jenkinsUrl:'',
+            username:'',
+            password:''
+        },
+        methods:{
+            getJenkinsConfig(){
+                $.post('./getJenkinsConfig',{},(data)=>{
+                    if(data.result == 1){
+                        for(var config of data.data){
+                            switch (config.paramId){
+                                case 'JENKINS_URL':
+                                    this.jenkinsUrl = config.paramValue;
+                                    break;
+                                case 'JENKINS_USERNAME':
+                                    this.username = config.paramValue;
+                                    break;
+                                case 'JENKINS_PASSWORD':
+                                    this.password = config.paramValue;
+                                    break;
+                            }
+                        }
+                    }
+                })
+            },
+            testJenkins(){
+                $.post('./testJenkins',{
+                    jenkinsUrl:this.jenkinsUrl,
+                    username:this.username,
+                    password:this.password
+                },(data)=>{
+                    if(data.result == 1){
+                        this.$message.success(data.msg);
+                    }else {
+                        this.$message.error(data.msg);
+                    }
+                })
+            },
+            saveJenkinsSetting(){
+                $.post('./saveJenkinsSetting',{
+                    jenkinsUrl:this.jenkinsUrl,
+                    username:this.username,
+                    password:this.password
+                },(data)=>{
+                    if(data.result == 1){
+                        this.$message.success(data.msg);
+                    }else {
+                        this.$message.error(data.msg);
+                    }
+                })
+            }
+        },
+        mounted(){
+            this.getJenkinsConfig();
+        }
+    });
+    elementUiNormalMethod(vue);
+
+
+</script>
+</body>
+</html>

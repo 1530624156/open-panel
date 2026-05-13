@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mavis.mypanel.dao.TServiceDao">
+
+    <resultMap type="com.mavis.mypanel.entity.TService" id="TServiceMap">
+        <result property="id" column="id" jdbcType="INTEGER"/>
+        <result property="unitId" column="unit_id" jdbcType="INTEGER"/>
+        <result property="groupId" column="group_id" jdbcType="INTEGER"/>
+        <result property="serverDockerId" column="server_docker_id" jdbcType="INTEGER"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="imageName" column="image_name" jdbcType="VARCHAR"/>
+        <result property="containerId" column="container_id" jdbcType="VARCHAR"/>
+        <result property="portBind" column="port_bind" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <!-- 批量插入 -->
+    <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_service(unit_idgroup_idserver_docker_idnameimage_namecontainer_idport_bind)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+        (#{entity.unitId}#{entity.groupId}#{entity.serverDockerId}#{entity.name}#{entity.imageName}#{entity.containerId}#{entity.portBind})
+        </foreach>
+    </insert>
+    <!-- 批量插入或按主键更新 -->
+    <insert id="insertOrUpdateBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_service(unit_idgroup_idserver_docker_idnameimage_namecontainer_idport_bind)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.unitId}#{entity.groupId}#{entity.serverDockerId}#{entity.name}#{entity.imageName}#{entity.containerId}#{entity.portBind})
+        </foreach>
+        on duplicate key update
+unit_id = values(unit_id) group_id = values(group_id) server_docker_id = values(server_docker_id) name = values(name) image_name = values(image_name) container_id = values(container_id) port_bind = values(port_bind)     </insert>
+
+    <select id="selectServiceVoList" resultType="com.mavis.mypanel.entity.vo.TServiceVo">
+        SELECT
+            u.name unit_name,
+            sg.name group_name,
+            t.*
+        from t_service t
+                 LEFT JOIN t_unit u on t.unit_id = u.id
+                 LEFT JOIN t_service_group sg on t.group_id= sg.id
+        WHERE 1=1
+        <if test="null != name and '' != name">
+            and t.name like '%' || #{name} ||'%'
+        </if>
+        <if test="null != alias and '' != alias">
+            and t.alias like '%' || #{alias} ||'%'
+        </if>
+        <if test="null != unitId and '' != unitId">
+            and t.unit_id = #{unitId}
+        </if>
+        <if test="null != groupId and '' != groupId">
+            and t.group_id = #{groupId}
+        </if>
+    </select>
+</mapper>
+

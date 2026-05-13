@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Web 终端 - 模拟 1Panel</title>
+
+    <!-- Element Plus & Vue 3 -->
+    <link href="../static/css/element-plus/index.css" rel="stylesheet"/>
+    <script src="../static/js/vue3/vue3.js"></script>
+    <script src="../static/js/element-plus/element-plus.js"></script>
+
+    <!-- Xterm -->
+    <link rel="stylesheet" href="../static/css/xterm.css"/>
+    <script src="../static/js/xterm.min.js"></script>
+    <script src="../static/js/xterm-addon-fit.min.js"></script>
+
+    <script src="../static/js/crypto-js.min.js"></script>
+    <style>
+        html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            height: 100%;
+            background: #1e1e1e;
+            margin: 0;
+            padding: 0;
+            color: #1e1e1e;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #app {
+            width: 100%;
+            height: 100%;
+        }
+
+        .el-card{
+            .el-card__body{
+                border: none;
+                padding: 0;
+            }
+            background: #000000;
+            border: none;
+        }
+        .el-container {
+            margin-top: 20px;
+            height: 100%;
+        }
+        .terminal-wrapper {
+            height: calc(1.2em * 28); /* 行高 × 行数 */
+            width: 100%;
+            background-color: #000;
+            border-radius: 6px;
+            overflow: hidden;
+            padding: 10px;
+        }
+        .el-tabs{
+            .el-tabs__nav,
+            .el-tabs__item,
+            .el-tabs__active-bar,
+            .el-tabs__content,
+            .el-tabs__header {
+                border-color: #606266 !important;
+                border-bottom: 1px solid #606266;
+            }
+
+        }
+        .tab-label {
+            display: flex;
+            align-items: center;
+        }
+
+        .tab-label .ping {
+            font-size: 12px;
+            color: #67c23a;
+        }
+        .page-container {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page-content {
+            flex: 1;
+        }
+
+        .page-footer {
+        }
+
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="page-container">
+        <div class="page-content" style="margin: 20px 10px 20px 10px;" >
+            <div>
+                <el-card>
+                    <el-radio-group v-model="radio1">
+                        <el-radio-button  label="终端" value="终端" />
+                    </el-radio-group>
+                </el-card>
+            </div>
+            <div>
+                <el-container>
+                    <el-tabs
+                            v-model="activeTab"
+                            type="card"
+                            editable
+                            @tab-remove="removeTerminal"
+                            @tab-add="addTerminal"
+                            @tab-click="resizeTerminal"
+                            style="height: 100%;width: 100%;"
+                    >
+                        <el-tab-pane
+                                v-for="tab in terminals"
+                                :key="tab.id"
+                                :name="tab.id"
+                        >
+                            <template #label>
+                          <span class="tab-label">
+                            <span class="ping">{{ tab.ping }}ms ✅</span>
+                            <span>{{ tab.name }}</span>
+                          </span>
+                            </template>
+                            <div class="terminal-wrapper" :ref="el => tab.container = el"></div>
+                        </el-tab-pane>
+                    </el-tabs>
+                </el-container>
+            </div>
+        </div>
+    </div>
+    <!--    页面底部-->
+    <div class="page-footer">
+        <el-divider />
+    </div>
+</div>
+
+
+<script>
+    const { createApp, ref, reactive, nextTick, onMounted } = Vue;
+
+    createApp({
+        setup() {
+            const terminals = reactive([]);
+            const activeTab = ref('');
+            const radio1 = ref('终端');
+            const fitAddon = new window.FitAddon.FitAddon();
+
+            const params = new URLSearchParams(window.location.search);
+            const serverId = params.get('serverId');
+
+            const encryptByAESFun = (message, key = 'IPUXV4/rLe8Uh9CKkHdORA==') => {
+                var keyHex = CryptoJS.enc.Utf8.parse(key);
+                var encrypted = CryptoJS.AES.encrypt(message, keyHex, {
+                    mode: CryptoJS.mode.ECB,
+                    padding: CryptoJS.pad.Pkcs7
+                });
+                return encrypted.ciphertext.toString(CryptoJS.enc.Base64);
+            };
+
+            const decryptByAESFun = (ciphertext, key = 'IPUXV4/rLe8Uh9CKkHdORA==') => {
+                var keyHex = CryptoJS.enc.Utf8.parse(key);
+                var decrypted = CryptoJS.AES.decrypt(ciphertext, keyHex, {
+                    mode: CryptoJS.mode.ECB,
+                    padding: CryptoJS.pad.Pkcs7
+                });
+                return decrypted.toString(CryptoJS.enc.Utf8);
+            };
+
+            const initTerm = (tab) => {
+                const term = new Terminal({
+                    lineHeight: 1.2,
+                    fontSize: 12,
+                    fontFamily: "Monaco, Menlo, Consolas, 'Courier New', monospace",
+                    cursorBlink: true,
+                    cursorStyle: 'underline',
+                    scrollback: 1000,
+                    scrollSensitivity: 15,
+                    tabStopWidth: 4,
+                    theme: { background: '#000000' }
+                });
+                term.open(tab.container);
+                term.loadAddon(fitAddon);
+                fitAddon.fit();
+                term.write(`🔌 正在连接 ${tab.name}...\r\n`);
+                tab.term = term;
+            };
+
+            const initWebSocket = (tab) => {
+                const socket = new WebSocket(`../ws/terminal`);
+                tab.socket = socket;
+
+                socket.onopen = () => {
+                    tab.ping = 0;
+                    tab.termReady = true;
+                    socket.send(encryptByAESFun(JSON.stringify({
+                        operate: 'connect',
+                        tagId: tab.id
+                    })));
+                    tab.term.write('✅ 连接成功\r\n');
+                    // 连接成功后再发 resize，使用 tab 自己的 term
+                    setTimeout(() => {
+                        doResize(tab);
+                    }, 100);
+                };
+
+                socket.onmessage = (event) => {
+                    tab.term.write(event.data);
+                };
+
+                socket.onerror = () => tab.term.write('\r\n❌ WebSocket 错误\r\n');
+                socket.onclose = () => {
+                    tab.termReady = false;
+                    tab.term.write('\r\n🔌 连接关闭\r\n');
+                };
+
+                tab.term.onData(data => {
+                    if (socket.readyState === WebSocket.OPEN) {
+                        socket.send(encryptByAESFun(JSON.stringify({
+                            operate: 'command',
+                            tagId: tab.id,
+                            command: data
+                        })));
+                    }
+                });
+
+                tab.heartbeatTimer = setInterval(() => {
+                    if (socket.readyState === WebSocket.OPEN) {
+                        socket.send(
+                            encryptByAESFun(JSON.stringify({
+                                tagId: tab.id,
+                                operate: 'heartbeat',
+                                timestamp: `${new Date().getTime()}`,
+                            }))
+                        );
+                    }
+                }, 1000 * 5);
+            };
+
+            const doResize = (tab) => {
+                try {
+                    if (tab.socket && tab.socket.readyState === WebSocket.OPEN) {
+                        tab.socket.send(encryptByAESFun(JSON.stringify({
+                            operate: 'resize',
+                            tagId: tab.id,
+                            cols: tab.term.cols,
+                            rows: tab.term.rows
+                        })));
+                    }
+                } catch (e) {
+                    console.error('Resize error:', e);
+                }
+            };
+
+            const addTerminal = async () => {
+                const response = await fetch('../server/loginSSH', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({ serverId })
+                });
+                const data = await response.json();
+                if (data.result !== 1) return;
+
+                const res = data.data;
+                const tab = {
+                    id: res.tagId,
+                    name: res.name,
+                    container: null,
+                    term: null,
+                    socket: null,
+                    ping: 0,
+                    termReady: false,
+                    heartbeatTimer: null
+                };
+                terminals.push(tab);
+                activeTab.value = tab.id;
+
+                await nextTick();
+                initTerm(tab);
+                initWebSocket(tab);
+            };
+
+            const removeTerminal = (id) => {
+                const idx = terminals.findIndex(t => t.id === id);
+                if (idx < 0) return;
+
+                const tab = terminals[idx];
+                if (tab.socket?.readyState === WebSocket.OPEN) {
+                    tab.socket.send(encryptByAESFun(JSON.stringify({
+                        operate: 'close',
+                        tagId: tab.id
+                    })));
+                }
+                if (tab.heartbeatTimer) {
+                    clearInterval(tab.heartbeatTimer);
+                }
+                tab.term?.dispose();
+                tab.socket?.close();
+                terminals.splice(idx, 1);
+                if (terminals.length > 0) {
+                    activeTab.value = terminals[Math.max(0, idx - 1)].id;
+                }
+            };
+
+            const handleResize = () => {
+                try {
+                    const tab = terminals.find(t => t.id === activeTab.value);
+                    if (tab) {
+                        doResize(tab);
+                    }
+                } catch (e) {
+                    console.error('handleResize error:', e);
+                }
+            };
+
+            const isWsOpen = () => {
+                const tab = terminals.find(t => t.id === activeTab.value);
+                return tab?.socket?.readyState === WebSocket.OPEN;
+            };
+
+            const enterFullScreen = () => {
+                const el = document.documentElement;
+                if (el.requestFullscreen) el.requestFullscreen();
+                else if (el.webkitRequestFullScreen) el.webkitRequestFullScreen();
+                else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
+                else if (el.msRequestFullscreen) el.msRequestFullscreen();
+            };
+
+            onMounted(() => {
+                addTerminal();
+            });
+
+            return {
+                radio1,
+                terminals,
+                activeTab,
+                addTerminal,
+                removeTerminal,
+                resizeTerminal: handleResize
+            };
+        }
+    }).use(ElementPlus).mount('#app');
+</script>
+
+</body>
+</html>

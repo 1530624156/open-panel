@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mavis.mypanel.dao.TJenkinsJobDao">
+
+    <resultMap type="com.mavis.mypanel.entity.TJenkinsJob" id="TJenkinsJobMap">
+        <result property="id" column="id" jdbcType="INTEGER"/>
+        <result property="jobName" column="job_name" jdbcType="VARCHAR"/>
+        <result property="remark" column="remark" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <!-- 批量插入 -->
+    <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_jenkins_job(job_nameremark)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+        (#{entity.jobName}#{entity.remark})
+        </foreach>
+    </insert>
+    <!-- 批量插入或按主键更新 -->
+    <insert id="insertOrUpdateBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_jenkins_job(job_nameremark)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.jobName}#{entity.remark})
+        </foreach>
+        on duplicate key update
+job_name = values(job_name) remark = values(remark)     </insert>
+
+</mapper>
+

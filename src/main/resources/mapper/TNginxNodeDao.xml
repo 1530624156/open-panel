@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mavis.mypanel.dao.TNginxNodeDao">
+
+    <resultMap type="com.mavis.mypanel.entity.TNginxNode" id="TNginxNodeMap">
+        <result property="id" column="id" jdbcType="INTEGER"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="apiUrl" column="api_url" jdbcType="VARCHAR"/>
+        <result property="deployType" column="deploy_type" jdbcType="VARCHAR"/>
+        <result property="execPath" column="exec_path" jdbcType="VARCHAR"/>
+        <result property="confPath" column="conf_path" jdbcType="VARCHAR"/>
+        <result property="dockerName" column="docker_name" jdbcType="VARCHAR"/>
+        <result property="remark" column="remark" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <!-- 批量插入 -->
+    <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_nginx_node(nameapi_urldeploy_typeexec_pathconf_pathdocker_nameremark)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+        (#{entity.name}#{entity.apiUrl}#{entity.deployType}#{entity.execPath}#{entity.confPath}#{entity.dockerName}#{entity.remark})
+        </foreach>
+    </insert>
+    <!-- 批量插入或按主键更新 -->
+    <insert id="insertOrUpdateBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_nginx_node(nameapi_urldeploy_typeexec_pathconf_pathdocker_nameremark)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.name}#{entity.apiUrl}#{entity.deployType}#{entity.execPath}#{entity.confPath}#{entity.dockerName}#{entity.remark})
+        </foreach>
+        on duplicate key update
+name = values(name) api_url = values(api_url) deploy_type = values(deploy_type) exec_path = values(exec_path) conf_path = values(conf_path) docker_name = values(docker_name) remark = values(remark)     </insert>
+
+</mapper>
+

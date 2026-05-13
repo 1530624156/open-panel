@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <script src="../static/js/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/index.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/My.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        html,body{
+            width: 100%;
+            overflow-x: hidden;
+        }
+        em.tls{
+            font-style: normal;
+            margin-right: 5px;
+            color: gray;
+        }
+        .container_stats{
+            width: 30px;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-breadcrumb separator="/">
+                <el-breadcrumb-item v-for="o in menu_path">{{o}}</el-breadcrumb-item>
+            </el-breadcrumb>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="6" :offset="1">
+            <el-input placeholder="IP" v-model="input_search_ip" size="small" @change="" @keyup.enter.native="getDockerList">
+                <template slot="prepend">IP</template>
+            </el-input>
+        </el-col>
+        <el-col :span="6">
+            <el-input placeholder="名称" v-model="input_search_name" size="small" @change="" @keyup.enter.native="getDockerList">
+                <template slot="prepend">名称</template>
+            </el-input>
+        </el-col>
+        <el-col :span="2" :offset="4">
+            <el-button style="width: 100%;" type="warning" size="small" @click="respanDockerStatus">刷新</el-button>
+        </el-col>
+        <el-col :span="2">
+            <el-button style="width: 100%;" type="primary" size="small" @click="getDockerList">搜索</el-button>
+        </el-col>
+        <el-col :span="2">
+            <el-button style="width: 100%;" type="success" size="small" @click="dialog_add = true">添加</el-button>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-table :data="list"  border stripe size="small" v-loading="loading">
+                <el-table-column width="50"  label="序号" type="index"></el-table-column>
+                <el-table-column label="名称" prop="name"></el-table-column>
+                <el-table-column label="IP" prop="ip"></el-table-column>
+                <el-table-column width="80" label="PORT" prop="port"></el-table-column>
+                <el-table-column width="80" label="TLS鉴权">
+                    <template slot-scope="scope">
+                        <el-tag v-if="scope.row.tls == 1" type="success" size="mini">开启</el-tag>
+                        <el-tag v-else type="danger" size="mini">未开启</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column width="50" label="CPU" prop="cpuNum"></el-table-column>
+                <el-table-column width="80" label="内存">
+                    <template slot-scope="scope">
+                        {{(scope.row.memTotal/1024/1024/1024).toFixed(1)}}G
+                    </template>
+                </el-table-column>
+                <el-table-column width="70" label="架构" prop="archType"></el-table-column>
+                <el-table-column width="50" label="状态">
+                    <template slot-scope="scope">
+                        <i v-if="scope.row.status == 1" class="el-icon-success" style="color: #13ce66;font-size:20px"></i>
+                        <i v-else class="el-icon-error" style="color: #ff4949;font-size:20px"></i>
+                    </template>
+                </el-table-column>
+                <el-table-column width="100" label="容器概况">
+                    <template slot-scope="scope">
+                        <el-tag class="container_stats" type="success" size="small">{{scope.row.containerUpNum}}</el-tag>
+                        <el-tag class="container_stats" type="danger" size="small">{{scope.row.containerDownNum}}</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column width="70" label="镜像数" prop="imagesNum"></el-table-column>
+                <el-table-column label="备注" prop="remark"></el-table-column>
+                <el-table-column width="150" label="操作">
+                    <template slot-scope="scope">
+                        <el-button type="primary" size="mini" @click="editDockerNode(scope.row)">编辑</el-button>
+                        <el-button type="danger" size="mini" @click="deleteById(scope.row.id)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-col>
+    </el-row>
+
+
+
+    <!--    添加节点 开始-->
+    <el-dialog
+            title="添加容器节点"
+            :visible.sync="dialog_add"
+            width="50%"
+            @close="">
+        <el-row :gutter="0">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_name" placeholder="" size="small">
+                    <template slot="prepend">名称</template>
+                </el-input>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20">
+                <el-col :span="14">
+                    <el-input v-model="input_ip" placeholder="" size="small">
+                        <template slot="prepend">IP</template>
+                    </el-input>
+                </el-col>
+                <el-col :span="9" :offset="1">
+                    <el-input v-model="input_port" placeholder="" size="small">
+                        <template slot="prepend">端口</template>
+                    </el-input>
+                </el-col>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20">
+                <el-input v-model="input_remark" placeholder="" size="small">
+                    <template slot="prepend">备注</template>
+                </el-input>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20">
+                <em class="tls">TLS安全校验</em>
+                <el-switch
+                        v-model="input_tls"
+                        active-color="#13ce66"
+                        inactive-color="#ff4949">
+                </el-switch>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20" v-if="input_tls == true">
+                <el-col :span="3"><em class="tls">CA</em></el-col>
+                <el-col :span="21">
+                    <el-upload
+                            class="upload-demo"
+                            action="../attachment/upload"
+                            :on-success="handleSuccessCa"
+                            :on-remove="handleRemoveCa"
+                            :limit="1">
+                        <el-button size="small" type="primary">点击上传</el-button>
+                    </el-upload>
+                </el-col>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20" v-if="input_tls == true">
+                <el-col :span="3"><em class="tls">CERT</em></el-col>
+                <el-col :span="21">
+                    <el-upload
+                            class="upload-demo"
+                            action="../attachment/upload"
+                            :on-success="handleSuccessCert"
+                            :on-remove="handleRemoveCert"
+                            :limit="1">
+                        <el-button size="small" type="primary">点击上传</el-button>
+                    </el-upload>
+                </el-col>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20" v-if="input_tls == true">
+                <el-col :span="3"><em class="tls">KEY</em></el-col>
+                <el-col :span="21">
+                    <el-upload
+                            class="upload-demo"
+                            action="../attachment/upload"
+                            :on-success="handleSuccessKey"
+                            :on-remove="handleRemoveKey"
+                            :limit="1">
+                        <el-button size="small" type="primary">点击上传</el-button>
+                    </el-upload>
+                </el-col>
+            </el-col>
+        </el-row>
+
+        <span slot="footer">
+            <el-button type="success" size="small" @click="testDockerNode">测试连接</el-button>
+            <el-button type="primary" size="small" @click="addDockerNode">确 定</el-button>
+        </span>
+    </el-dialog>
+    <!--    添加节点 结束-->
+
+
+
+    <!--    添加节点 开始-->
+    <el-dialog
+            title="编辑容器节点"
+            :visible.sync="dialog_edit"
+            width="50%"
+            @close="">
+        <el-row :gutter="0">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_edit_name" placeholder="" size="small">
+                    <template slot="prepend">名称</template>
+                </el-input>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20">
+                <el-col :span="14">
+                    <el-input v-model="input_edit_ip" placeholder="" size="small">
+                        <template slot="prepend">IP</template>
+                    </el-input>
+                </el-col>
+                <el-col :span="9" :offset="1">
+                    <el-input v-model="input_edit_port" placeholder="" size="small">
+                        <template slot="prepend">端口</template>
+                    </el-input>
+                </el-col>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20">
+                <el-input v-model="input_edit_remark" placeholder="" size="small">
+                    <template slot="prepend">备注</template>
+                </el-input>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20">
+                <em class="tls">TLS安全校验</em>
+                <el-switch
+                        v-model="input_edit_tls"
+                        active-color="#13ce66"
+                        inactive-color="#ff4949">
+                </el-switch>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20" v-if="input_edit_tls == true">
+                <el-col :span="3"><em class="tls">CA</em></el-col>
+                <el-col :span="21">
+                    <el-upload
+                            class="upload-demo"
+                            action="../attachment/upload"
+                            :on-success="handleSuccessCa"
+                            :on-remove="handleRemoveCa"
+                            :limit="1">
+                        <el-button size="small" type="primary">点击上传</el-button>
+                    </el-upload>
+                </el-col>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20" v-if="input_edit_tls == true">
+                <el-col :span="3"><em class="tls">CERT</em></el-col>
+                <el-col :span="21">
+                    <el-upload
+                            class="upload-demo"
+                            action="../attachment/upload"
+                            :on-success="handleSuccessCert"
+                            :on-remove="handleRemoveCert"
+                            :limit="1">
+                        <el-button size="small" type="primary">点击上传</el-button>
+                    </el-upload>
+                </el-col>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20" v-if="input_edit_tls == true">
+                <el-col :span="3"><em class="tls">KEY</em></el-col>
+                <el-col :span="21">
+                    <el-upload
+                            class="upload-demo"
+                            action="../attachment/upload"
+                            :on-success="handleSuccessKey"
+                            :on-remove="handleRemoveKey"
+                            :limit="1">
+                        <el-button size="small" type="primary">点击上传</el-button>
+                    </el-upload>
+                </el-col>
+            </el-col>
+        </el-row>
+
+        <span slot="footer">
+            <el-button type="success" size="small" @click="editTestDockerNode">测试连接</el-button>
+            <el-button type="primary" size="small" @click="editDockerNodeSave">确 定</el-button>
+        </span>
+    </el-dialog>
+    <!--    添加节点 结束-->
+
+</div>
+
+<script>
+    var vue = new Vue({
+        el: '#app',
+        data:{
+            menu_path:parent.vue_data.menu_path,
+            input_search_ip:"",
+            input_search_name:"",
+            loading:false,
+            list:[],
+            dialog_add:false,
+            input_name:'',
+            input_ip:'',
+            input_port:'',
+            input_tls:false,
+            input_ca_attachment_uuid:'',
+            input_remark:'',
+
+            dialog_edit:false,
+            input_edit_id:'',
+            input_edit_name:'',
+            input_edit_ip:'',
+            input_edit_port:'',
+            input_edit_remark:'',
+            input_edit_tls:false
+        },
+        methods:{
+            getDockerList(){
+                this.loading = true;
+                $.post("./getDockerList",{
+                    ip:this.input_search_ip,
+                    name:this.input_search_name
+                },(data)=>{
+                    this.loading = false;
+                    if(data.result == 1){
+                        vue.list = data.data;
+                    }
+                })
+            },
+            deleteById(id){
+                this.myConfirm('确认','确定删除该容器节点?',()=>{
+                    $.post('deleteDockerNodeById',{
+                        id:id
+                    },(data)=>{
+                        if(data.result == 1){
+                            vue.getDockerList();
+                            this.myMessage('success',data.msg);
+                        }else {
+                            this.myMessage('error',data.msg);
+                        }
+                    })
+                },()=>{})
+            },
+            handleSuccessCa(res,file,filelist){
+                if(res.result == 1){
+                    vue.input_ca_attachment_uuid = res.data.uuid;
+                }
+            },
+            handleRemoveCa(file, fileList) {
+                vue.input_ca_attachment_uuid = '';
+            },
+            handleSuccessCert(res,file,filelist){
+                if(res.result == 1){
+                    vue.input_cert_attachment_uuid = res.data.uuid;
+                }
+            },
+            handleRemoveCert(file, fileList) {
+                vue.input_cert_attachment_uuid = '';
+            },
+            handleSuccessKey(res,file,filelist){
+                if(res.result == 1){
+                    vue.input_key_attachment_uuid = res.data.uuid;
+                }
+            },
+            handleRemoveKey(file, fileList) {
+                vue.input_key_attachment_uuid = '';
+            },
+            addDockerNode(){
+                $.post('addDockerNode',{
+                    name:vue.input_name,
+                    ip:vue.input_ip,
+                    port:vue.input_port,
+                    tls:vue.input_tls ? 1 : 0,
+                    remark:vue.input_remark,
+                    tlsCaAttachUuid:vue.input_ca_attachment_uuid,
+                    tlsCertAttachUuid:vue.input_cert_attachment_uuid,
+                    tlsKeyAttachUuid:vue.input_key_attachment_uuid
+                },(data)=>{
+                    if(data.result == 1){
+                        vue.getDockerList();
+                        this.myMessage('success',data.msg);
+                    }else {
+                        this.myMessage('error',data.msg);
+                    }
+                })
+            },
+            editDockerNode(row){
+                this.dialog_edit = true;
+                this.input_edit_name = row.name;
+                this.input_edit_ip = row.ip;
+                this.input_edit_port = row.port;
+                this.input_edit_remark = row.remark;
+                this.input_edit_tls = row.tls == 1 ? true : false;
+                this.input_edit_id = row.id;
+                this.input_ca_attachment_uuid = row.tlsCaAttachUuid;
+                this.input_cert_attachment_uuid = row.tlsCertAttachUuid;
+                this.input_key_attachment_uuid = row.tlsKeyAttachUuid;
+            },
+            editDockerNodeSave(){
+                $.post('editDockerNode',{
+                    id:vue.input_edit_id,
+                    name:vue.input_edit_name,
+                    ip:vue.input_edit_ip,
+                    port:vue.input_edit_port,
+                    tls:vue.input_edit_tls ? 1 : 0,
+                    remark:vue.input_edit_remark,
+                    tlsCaAttachUuid:vue.input_ca_attachment_uuid,
+                    tlsCertAttachUuid:vue.input_cert_attachment_uuid,
+                    tlsKeyAttachUuid:vue.input_key_attachment_uuid
+                },(data)=>{
+                    if(data.result == 1){
+                        vue.getDockerList();
+                        this.myMessage('success',data.msg);
+                    }else {
+                        this.myMessage('error',data.msg);
+                    }
+                })
+            },
+            testDockerNode(){
+                $.post('testDockerNode',{
+                    id:0,
+                    ip:vue.input_ip,
+                    port:vue.input_port,
+                    tls:vue.input_tls ? 1 : 0,
+                    tlsCaAttachUuid:vue.input_ca_attachment_uuid,
+                    tlsCertAttachUuid:vue.input_cert_attachment_uuid,
+                    tlsKeyAttachUuid:vue.input_key_attachment_uuid
+                },(data)=> {
+                    if(data.result == 1){
+                        this.myMessage('success','连接成功:'+data.data.OperatingSystem);
+                    }else {
+                        this.myMessage('error',data.msg);
+                    }
+                })
+            },
+            editTestDockerNode(){
+                $.post('testDockerNode',{
+                    id:vue.input_edit_id,
+                    ip:vue.input_edit_ip,
+                    port:vue.input_edit_port,
+                    tls:vue.input_edit_tls ? 1 : 0,
+                    tlsCaAttachUuid:vue.input_ca_attachment_uuid,
+                    tlsCertAttachUuid:vue.input_cert_attachment_uuid,
+                    tlsKeyAttachUuid:vue.input_key_attachment_uuid
+                },(data)=> {
+                    if(data.result == 1){
+                        this.myMessage('success','连接成功:'+data.data.OperatingSystem);
+                    }else {
+                        this.myMessage('error',data.msg);
+                    }
+                })
+            },
+            respanDockerStatus(){
+                this.loading = true;
+                $.post('respanDockerStatus',(data)=>{
+                    if(data.result == 1){
+                        vue.getDockerList();
+                    }
+                })
+            }
+        }
+    });
+    elementUiNormalMethod(vue);
+    vue.getDockerList();
+
+
+</script>
+</body>
+</html>

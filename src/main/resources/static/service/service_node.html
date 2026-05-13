@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <script src="../static/js/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/index.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/My.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        html,body{
+            width: 100%;
+            overflow-x: hidden;
+        }
+        #log_text{
+            width: 100%;
+            height: 600px;
+            background-color: black;
+            resize: none;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-breadcrumb separator="/">
+                <el-breadcrumb-item v-for="o in menu_path">{{o}}</el-breadcrumb-item>
+            </el-breadcrumb>
+        </el-col>
+    </el-row>
+
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="5" :offset="1">
+            <el-select v-model="input_search_unit_name" placeholder="租户名" size="small" filterable style="width: 100%" @change="getServiceNodeList">
+                <el-option label="不筛选租户名" value="" disabled></el-option>
+                <el-option v-for="o in list_unit_name" :label="o.name" :value="o.name"></el-option>
+            </el-select>
+        </el-col>
+        <el-col :span="5">
+            <el-select v-model="input_search_service_group" placeholder="服务组" size="small" filterable style="width: 100%" @change="getServiceNodeList">
+                <el-option label="不筛选服务组" value=""></el-option>
+                <el-option v-for="o in list_service_group" :label="o.name" :value="o.id"></el-option>
+            </el-select>
+        </el-col>
+        <el-col :span="5">
+            <el-input v-model="input_search_service_alias" placeholder="服务别名" size="small" style="width: 100%" @keyup.enter.native="getServiceNodeList"></el-input>
+        </el-col>
+        <el-col :span="2" :offset="3">
+            <el-button style="width: 100%;" type="primary" size="small" @click="getServiceNodeList">搜索</el-button>
+        </el-col>
+        <el-col :span="2">
+            <el-button style="width: 100%;" type="success" size="small" @click="">添加</el-button>
+        </el-col>
+    </el-row>
+
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="2" :offset="1">
+            <el-button style="width: 100%;" type="success" size="small" @click="batchStartNode" :disabled="checked_node_ids.length == 0">批量启动</el-button>
+        </el-col>
+        <el-col :span="2">
+            <el-button style="width: 100%;" type="warning" size="small" @click="batchRestartNode" :disabled="checked_node_ids.length == 0">批量重启</el-button>
+        </el-col>
+        <el-col :span="2">
+            <el-button style="width: 100%;" type="danger" size="small" @click="batchKillNode" :disabled="checked_node_ids.length == 0">批量停止</el-button>
+        </el-col>
+    </el-row>
+
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-table :data="list"  border stripe size="small" v-loading="loading" empty-text="请先筛选租户" @selection-change="selectionChange">
+                <el-table-column type="selection" width="55" align="center"></el-table-column>
+                <el-table-column width="50"  label="序号" type="index"></el-table-column>
+                <el-table-column width="100" prop="unitName" label="租户名"></el-table-column>
+                <el-table-column width="120" label="服务组">
+                    <template slot-scope="scope">
+                        <el-tag type="primary" size="mini">{{scope.row.serviceGroupName}}</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column width="170" label="节点">
+                    <template slot-scope="scope">
+                        <a :href="'http://'+scope.row.dockerIp+':'+scope.row.portWebOut" target="_blank">{{scope.row.dockerIp+':'+scope.row.portWebOut}}</a>
+                    </template>
+                </el-table-column>
+<!--                <el-table-column width="120" prop="dockerIp" label="容器节点IP"></el-table-column>-->
+                <el-table-column width="220" prop="serviceAlias" label="服务别名"></el-table-column>
+                <el-table-column width="120" label="端口映射(外:内)">
+                    <template slot-scope="scope">
+                        <el-tag v-for="o in Object.keys(JSON.parse(scope.row.portMap))" size="mini">{{o}} : {{JSON.parse(scope.row.portMap)[o]}}</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="portWebOut" label="服务端口(对外)"></el-table-column>
+                <el-table-column width="300" prop="containerName" label="容器名"></el-table-column>
+<!--                <el-table-column prop="containerId" label="容器ID"></el-table-column>-->
+
+                <el-table-column width="370" label="操作" :gutter="0">
+                    <template slot-scope="scope">
+                        <el-button type="primary" size="mini" @click="showServiceNodeLog(scope.row.id)">日志</el-button>
+                        <el-button type="success" size="mini" @click="startServiceNode(scope.row.id)">启动</el-button>
+                        <el-button type="warning" size="mini" @click="restartServiceNode(scope.row.id)">重启</el-button>
+                        <el-button type="default" size="mini" @click="killServiceNode(scope.row.id)">停止</el-button>
+                        <el-button type="danger" size="mini" @click="deleteServiceNode(scope.row.id)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-col>
+    </el-row>
+
+
+
+    <el-dialog
+            title="节点日志"
+            :visible.sync="dialog_log"
+            width="90%"
+            @close="closeServiceNodeLog">
+        <el-row :gutter="20">
+            <el-col :span="3" :offset="13">
+                <el-switch v-model="log_status" active-text="获取" @change="getServiceNodeLog"></el-switch>
+            </el-col>
+            <el-col :span="3">
+                <el-switch v-model="log_scroll" active-text="追踪"> </el-switch>
+            </el-col>
+            <el-col :span="4">
+                <el-input v-model="input_log_line" placeholder="行数" size="mini" style="width: 100%">
+                    <template slot="append">行</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="22" :offset="1">
+                <textarea id="log_text">{{log_content}}</textarea>
+            </el-col>
+        </el-row>
+
+        <span slot="footer">
+            <el-button type="primary" size="small" @click="closeServiceNodeLog">关闭</el-button>
+        </span>
+    </el-dialog>
+
+
+</div>
+
+<script>
+    var vue = new Vue({
+        el: '#app',
+        data:{
+            menu_path:parent.vue_data.menu_path,
+            list:[],
+            loading:false,
+            dialog_log:false,
+
+            list_service_name:[],
+            list_unit_name:[],
+            list_service_group:[],
+
+            input_search_service_name:'',
+            input_search_service_alias:'',
+            input_search_unit_name:'',
+            input_search_service_group:'',
+
+            input_log_line:100,
+            log_content:'',
+            log_node_id:'',
+            log_interval:null,
+            log_scroll:false,
+            log_status:false,
+
+            checked_node_ids:[]
+        },
+        methods:{
+            getServiceNodeList(){
+                // if(vue.input_search_unit_name == '' || vue.input_search_unit_name == null){
+                //     vue.myMessage('error','请先筛选租户');
+                //     return;
+                // }
+
+                $.post('./getServiceNode',{
+                    serviceAlias:vue.input_search_service_alias,
+                    unitName:vue.input_search_unit_name,
+                    serviceGroupId:vue.input_search_service_group
+                },(data)=>{
+                    if(data.result == 1){
+                        vue.list = data.data;
+                    }
+                })
+            },
+            getServiceNameList(){
+                $.post('./getServiceName',(data)=>{
+                    if(data.result == 1){
+                        vue.list_service_name = data.data;
+                    }
+                })
+            },
+            getUnitNameList(){
+                $.post('./getUnitName',(data)=>{
+                    if(data.result == 1){
+                        vue.list_unit_name = data.data;
+                    }
+                })
+            },
+            getServiceGroup(){
+                $.post('./getServiceGroup',(data)=>{
+                    if(data.result == 1){
+                        vue.list_service_group = data.data;
+                    }
+                })
+            },
+            deleteServiceNode(id){
+                this.myConfirm('删除','确定删除该服务节点吗？',()=>{
+                    $.post('deleteServiceNode',{
+                        id:id
+                    },(data)=>{
+                        if(data.result == 1){
+                            vue.getServiceNodeList();
+                            vue.myMessage('success',data.msg);
+                        }else {
+                            vue.myMessage('error',data.msg);
+                        }
+                    })
+                },()=>{});
+            },
+            killServiceNode(id){
+                this.myConfirm('停止','确定停止该服务节点吗？',()=>{
+                    vue.loading = true;
+                    $.post('killServiceNode',{
+                        id:id
+                    },(data)=>{
+                        vue.loading = false;
+                        if(data.result == 1){
+                            vue.getServiceNodeList();
+                            vue.myMessage('success',data.msg);
+                        }else {
+                            vue.myMessage('error',data.msg);
+                        }
+                    })
+                },()=>{});
+            },
+            startServiceNode(id){
+                vue.loading = true;
+                $.post('startServiceNode',{
+                    id:id
+                },(data)=>{
+                    vue.loading = false;
+                    if(data.result == 1){
+                        vue.getServiceNodeList();
+                        vue.myMessage('success',data.msg);
+                    }else {
+                        vue.myMessage('error',data.msg);
+                    }
+                })
+            },
+            restartServiceNode(id){
+                vue.myConfirm('重启','确定重启该服务节点吗？',()=>{
+                    vue.loading = true;
+                    $.post('restartServiceNode',{
+                        id:id
+                    },(data)=>{
+                        vue.loading = false;
+                        if(data.result == 1){
+                            vue.getServiceNodeList();
+                            vue.myMessage('success',data.msg);
+                        }else {
+                            vue.myMessage('error',data.msg);
+                        }
+                    })
+                },()=>{});
+            },
+            showServiceNodeLog(id){
+                this.log_node_id = id;
+                this.dialog_log = true;
+            },
+            getServiceNodeLog(){
+                if(this.log_status){
+                    this.log_interval = setInterval(()=>{
+                        $.post('./getServiceNodeLogByTail',{
+                            id:vue.log_node_id,
+                            tail:vue.input_log_line
+                        },(data)=>{
+                            vue.log_content = data.data.join('\n');
+                            if(vue.log_scroll){
+                                $('#log_text').scrollTop(999999);
+                            }
+                        })
+                    },1000)
+                }else {
+                    clearInterval(this.log_interval);
+                    this.log_content = ''
+                }
+            },
+            closeServiceNodeLog(){
+                this.log_node_id = '';
+                this.log_status = false;
+                clearInterval(this.log_interval);
+                this.log_content = ''
+                this.dialog_log = false;
+            },
+            selectionChange(e){
+                this.checked_node_ids = [];
+                for(let i=0;i<e.length;i++){
+                    this.checked_node_ids.push(e[i].id);
+                }
+            },
+            batchStartNode(){
+                this.myConfirm('批量启动','确定批量启动选中的服务节点吗？',()=>{
+                    for(nodeId of this.checked_node_ids){
+                        vue.startServiceNode(nodeId);
+                    }
+                },()=>{});
+            },
+            batchKillNode(){
+                this.myConfirm('批量停止','确定批量停止选中的服务节点吗？',()=>{
+                    for(nodeId of this.checked_node_ids){
+                        $.post('killServiceNode',{
+                            id:nodeId
+                        },(data)=>{
+                            if(data.result == 1){
+                                vue.myMessage('success',data.msg);
+                            }else {
+                                vue.myMessage('error',data.msg);
+                            }
+                        })
+                    }
+                })
+            },
+            batchRestartNode(){
+                this.myConfirm('批量重启','确定批量重启选中的服务节点吗？',()=>{
+                    for(nodeId of this.checked_node_ids){
+                        $.post('restartServiceNode',{
+                            id:nodeId
+                        },(data)=>{
+                            if(data.result == 1){
+                                vue.myMessage('success',data.msg);
+                            }else {
+                                vue.myMessage('error',data.msg);
+                            }
+                        })
+                    }
+                })
+            }
+        }
+    });
+    elementUiNormalMethod(vue);
+    // vue.getServiceNodeList();
+    // vue.getServiceNameList();
+    vue.getUnitNameList();
+    vue.getServiceGroup();
+
+
+</script>
+</body>
+</html>

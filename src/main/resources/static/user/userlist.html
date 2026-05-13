@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <script src="../static/js/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/index.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/My.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+<div id="app">
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-breadcrumb separator="/">
+                <el-breadcrumb-item v-for="o in menu_path">{{o}}</el-breadcrumb-item>
+            </el-breadcrumb>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="8" :offset="1">
+            <el-input placeholder="姓名" v-model="input_user_name" size="small" @change="" @keyup.enter.native="getUserList">
+                <template slot="prepend">姓名</template>
+            </el-input>
+        </el-col>
+        <el-col :span="8">
+            <el-input placeholder="用户名" v-model="input_user_username" size="small" @change="" @keyup.enter.native="getUserList">
+                <template slot="prepend">用户名</template>
+            </el-input>
+        </el-col>
+        <el-col :span="3">
+            <el-button style="width: 100%;" type="primary" size="small" @click="getUserList()">搜索</el-button>
+        </el-col>
+        <el-col :span="3">
+            <el-button style="width: 100%;" type="success" size="small" @click="dialog_adduser = true">添加</el-button>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-table :data="users" border stripe size="mini">
+                <el-table-column width="80"  label="序号" type="index"></el-table-column>
+                <el-table-column  label="姓名" prop="name"></el-table-column>
+                <el-table-column  label="手机号" prop="tel"></el-table-column>
+                <el-table-column  label="账号" prop="username"></el-table-column>
+                <el-table-column  label="密码" prop="password"></el-table-column>
+                <el-table-column  label="用户组">
+                    <template slot-scope="scope">
+                        <span v-for="item in getOneUserGroups(scope.row.groups)">
+                            <el-tag size="mini" style="margin-right: 5px;">{{item}}</el-tag>
+                        </span>
+                    </template>
+                </el-table-column>
+                <el-table-column width="150"  label="操作" >
+                    <template slot-scope="scope">
+                        <el-button type="primary" size="mini" @click="editUser(scope.row)">编辑</el-button>
+                        <el-button type="danger" size="mini" @click="deleteUser(scope.row)">删除</el-button>
+                    </template>
+                </el-table-column>
+                
+            </el-table>
+            
+        </el-col>
+    </el-row>
+
+
+    <!-- 添加用户弹窗 -->
+    <el-dialog
+            title="添加用户"
+            :visible.sync="dialog_adduser"
+            width="400px"
+            @close="">
+        <el-row>
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_username_add" placeholder="" size="normal" @change="">
+                    <template slot="prepend">账号</template>
+                </el-input>
+
+            </el-col>
+        </el-row>
+        <el-row class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_password_add" placeholder="" size="normal" @change="">
+                    <template slot="prepend">密码</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_password_name_add" placeholder="" size="normal" @change="">
+                    <template slot="prepend">姓名</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_password_tel_add" placeholder="" size="normal" @change="">
+                    <template slot="prepend">手机号</template>
+                </el-input>
+            </el-col>
+        </el-row>
+
+        <span slot="footer">
+        <el-button @click="dialog_adduser = false">取 消</el-button>
+        <el-button type="primary" @click="addUser()">添 加</el-button>
+    </span>
+    </el-dialog>
+
+    <!-- 编辑用户弹窗 -->
+    <el-dialog
+            title="编辑用户"
+            :visible.sync="dialog_edituser"
+            width="400px"
+            @close="">
+        <el-row>
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_username_edit" placeholder="" size="normal" @change="">
+                    <template slot="prepend">账号</template>
+                </el-input>
+
+            </el-col>
+        </el-row>
+        <el-row class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_password_edit" placeholder="" size="normal" @change="">
+                    <template slot="prepend">密码</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_password_name_edit" placeholder="" size="normal" @change="">
+                    <template slot="prepend">姓名</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_password_tel_edit" placeholder="" size="normal" @change="">
+                    <template slot="prepend">手机号</template>
+                </el-input>
+            </el-col>
+        </el-row>
+
+        <span slot="footer">
+        <el-button @click="dialog_edituser = false">取 消</el-button>
+        <el-button type="primary" @click="editUserSave()">保 存</el-button>
+    </span>
+    </el-dialog>
+</div>
+
+<script>
+    var vue = new Vue({
+        el:'#app',
+        data:{
+            menu_path:parent.vue_data.menu_path,
+            users:[],
+            dialog_adduser:false,
+            dialog_edituser:false,
+            input_username_add:'',
+            input_password_add:'',
+            input_password_name_add:'',
+            input_password_tel_add:'',
+            input_id_edit:'',
+            input_username_edit:'',
+            input_password_edit:'',
+            input_password_name_edit:'',
+            input_password_tel_edit:'',
+
+            // 输入框
+            input_user_name:'',
+            input_user_username:''
+        },
+        methods:{
+            getUserList(){
+                $.post('getUserGroupList',{
+                    username:this.input_user_username,
+                    name:this.input_user_name
+                },(data)=>{
+                    if(data.result == 1){
+                        this.users = data.data;
+                    }
+                })
+            },
+            addUser(){
+                $.post('addUser',{
+                    username:this.input_username_add,
+                    password:this.input_password_add,
+                    name:this.input_password_name_add,
+                    tel:this.input_password_tel_add
+                },(data)=>{
+                    if(data.result == 1){
+                        vue.myMessage('success',data.msg);
+                        vue.getUserList();
+                        vue.dialog_adduser = false;
+                        vue.input_username_add = '';
+                        vue.input_password_add = '';
+                        vue.input_password_name_add = '';
+                        vue.input_password_tel_add = '';
+                    }else{
+                        vue.myMessage('error',data.msg);
+                    }
+                })
+            },
+            deleteUser(row){
+                vue.myConfirm('删除用户','确定删除该用户？',()=>{
+                    $.post('deleteById',{id:row.id},(data)=>{
+                        if(data.result == 1){
+                            vue.myMessage('success',data.msg);
+                            vue.getUserList();
+                        }else{
+                            vue.myMessage('error',data.msg);
+                        }
+                    })
+                },()=>{})
+            },
+            editUser(row){
+                this.input_id_edit = row.id;
+                this.input_username_edit = row.username;
+                this.input_password_edit = row.password;
+                this.input_password_name_edit = row.name;
+                this.input_password_tel_edit = row.tel;
+                this.dialog_edituser = true;
+            },
+            editUserSave(){
+                $.post('editUser',{
+                    id:this.input_id_edit,
+                    username:this.input_username_edit,
+                    password:this.input_password_edit,
+                    name:this.input_password_name_edit,
+                    tel:this.input_password_tel_edit
+                },(data)=>{
+                    if(data.result == 1){
+                        vue.myMessage('success',data.msg);
+                        vue.getUserList();
+                        vue.dialog_edituser = false;
+                    }else{
+                        vue.myMessage('error',data.msg);
+                    }
+                })
+            },
+            getOneUserGroups(groups){
+                if(groups == '' || groups == null){
+                    return [];
+                }else {
+                    return groups.split(',');
+                }
+            }
+        }
+    })
+    elementUiNormalMethod(vue);
+
+    vue.getUserList();
+</script>
+</body>
+</html>

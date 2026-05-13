@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mavis.mypanel.dao.TServerDockerDao">
+
+    <resultMap type="com.mavis.mypanel.entity.TServerDocker" id="TServerDockerMap">
+        <result property="id" column="id" jdbcType="INTEGER"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="ip" column="ip" jdbcType="VARCHAR"/>
+        <result property="port" column="port" jdbcType="VARCHAR"/>
+        <result property="tls" column="tls" jdbcType="INTEGER"/>
+        <result property="tlsCaAttachUuid" column="tls_ca_attach_uuid" jdbcType="VARCHAR"/>
+        <result property="tlsCertAttachUuid" column="tls_cert_attach_uuid" jdbcType="VARCHAR"/>
+        <result property="tlsKeyAttachUuid" column="tls_key_attach_uuid" jdbcType="VARCHAR"/>
+        <result property="remark" column="remark" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <!-- 批量插入 -->
+    <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_server_docker(nameipporttlstls_ca_attach_uuidtls_cert_attach_uuidtls_key_attach_uuidremark)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+        (#{entity.name}#{entity.ip}#{entity.port}#{entity.tls}#{entity.tlsCaAttachUuid}#{entity.tlsCertAttachUuid}#{entity.tlsKeyAttachUuid}#{entity.remark})
+        </foreach>
+    </insert>
+    <!-- 批量插入或按主键更新 -->
+    <insert id="insertOrUpdateBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_server_docker(nameipporttlstls_ca_attach_uuidtls_cert_attach_uuidtls_key_attach_uuidremark)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.name}#{entity.ip}#{entity.port}#{entity.tls}#{entity.tlsCaAttachUuid}#{entity.tlsCertAttachUuid}#{entity.tlsKeyAttachUuid}#{entity.remark})
+        </foreach>
+        on duplicate key update
+name = values(name) ip = values(ip) port = values(port) tls = values(tls) tls_ca_attach_uuid = values(tls_ca_attach_uuid) tls_cert_attach_uuid = values(tls_cert_attach_uuid) tls_key_attach_uuid = values(tls_key_attach_uuid) remark = values(remark)     </insert>
+
+</mapper>
+

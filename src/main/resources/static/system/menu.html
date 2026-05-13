@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <script src="../static/js/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/index.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/My.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        img.icon{
+            display: inline-block;
+            width: 30px;
+            text-align: center;
+        }
+        .avatar-uploader .el-upload {
+            border: 1px dashed #d9d9d9;
+            border-radius: 6px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .avatar-uploader .el-upload:hover {
+            border-color: #409EFF;
+        }
+        .avatar-uploader-icon {
+            font-size: 20px;
+            color: #8c939d;
+            width: 50px;
+            height: 50px;
+            line-height: 50px;
+            text-align: center;
+        }
+        .avatar {
+            width: 50px;
+            height: 50px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-breadcrumb separator="/">
+                <el-breadcrumb-item v-for="o in menu_path">{{o}}</el-breadcrumb-item>
+            </el-breadcrumb>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="8" :offset="1">
+            <el-input placeholder="" v-model="input_search_name" size="small" @change="" @keyup.enter.native="getMenuList">
+                <template slot="prepend">菜单名称</template>
+            </el-input>
+        </el-col>
+        <el-col :span="3" :offset="8">
+            <el-button style="width: 100%;" type="primary" size="small" @click="getMenuList">搜索</el-button>
+        </el-col>
+        <el-col :span="3">
+            <el-button style="width: 100%;" type="success" size="small" @click="showAddMenu">添加</el-button>
+        </el-col>
+    </el-row>
+
+<!--    菜单表格-->
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-table :data="menu_list" border stripe
+                      row-key="id"
+                      default-expand-all
+                      :tree-props="{children: 'secendMenu'}" size="mini">
+                <el-table-column width="150" label="名称" prop="name"></el-table-column>
+                <el-table-column  label="链接" prop="href"></el-table-column>
+                <el-table-column width="80" label="是否目录">
+                    <template slot-scope="scope">
+                        {{scope.row.pid == 0 || scope.row.pid == null?'是':'否'}}
+                    </template>
+                </el-table-column>
+                <el-table-column width="80" label="排序值" prop="sort"></el-table-column>
+                <el-table-column width="100" label="图标(常规)">
+                    <template slot-scope="scope">
+                        <img :src="'../'+scope.row.icon" class="icon">
+                    </template>
+                </el-table-column>
+                <el-table-column width="100" label="图标(激活)">
+                    <template slot-scope="scope">
+                        <img :src="'../'+scope.row.iconActive" class="icon">
+                    </template>
+                </el-table-column>
+                <el-table-column width="100" label="所属权限">
+                    <template slot-scope="scope">
+                        <el-tag v-if="scope.row.permission != '' && scope.row.permission != null" type="success">{{allPermission[scope.row.permission]}}</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column width="150" label="操作" >
+                    <template slot-scope="scope">
+                        <el-button type="primary" size="mini" @click="editMenu(scope.row)">编辑</el-button>
+                        <el-button type="danger" size="mini" @click="deleteMenu(scope.row.id)">删除</el-button>
+                    </template>
+                </el-table-column>
+
+            </el-table>
+
+        </el-col>
+    </el-row>
+
+
+<!--    编辑菜单-->
+    <el-dialog
+            title="编辑菜单"
+            :visible.sync="dialog_menu_edit"
+            width="40%"
+            @close="">
+        <el-row :gutter="0">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_edit_name" placeholder="" size="normal">
+                    <template slot="prepend">菜单名称</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_edit_href" placeholder="" size="normal">
+                    <template slot="prepend">链接</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_edit_sort" type="number" placeholder="" size="normal">
+                    <template slot="prepend">排序值</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="5" :offset="1">
+                <el-upload
+                        class="avatar-uploader"
+                        action="../attachment/upload"
+                        :show-file-list="false"
+                        :on-success="handleAvatarSuccess_icon">
+                    <img v-if="input_edit_icon" :src="'../'+input_edit_icon" class="avatar">
+                    <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+                    <div slot="tip" class="el-upload__tip">图标(常规)</div>
+                </el-upload>
+            </el-col>
+            <el-col :span="5" :offset="1">
+                <el-upload
+                        class="avatar-uploader"
+                        action="../attachment/upload"
+                        :show-file-list="false"
+                        :on-success="handleAvatarSuccess_iconActive">
+                    <img v-if="input_edit_iconActive" :src="'../'+input_edit_iconActive" class="avatar">
+                    <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+                    <div slot="tip" class="el-upload__tip">图标(激活)</div>
+                </el-upload>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <label>父级菜单</label>
+                <el-select v-model="select_edit_parent" placeholder="父级菜单(目录则为一级)" size="normal" style="width: 100%">
+                    <el-option label="目录(一级菜单)" value="0"></el-option>
+                    <el-option v-for="item in menu_list" :label="item.name" :value="item.id"></el-option>
+                </el-select>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <label>所属权限</label>
+                <el-select v-model="select_edit_permission" placeholder="所属权限" size="normal" style="width: 100%">
+                    <el-option label="无需权限" value=""></el-option>
+                    <el-option v-for="permission in Object.keys(allPermission)" :label="allPermission[permission]+'('+permission+')'" :value="permission"></el-option>
+                </el-select>
+            </el-col>
+        </el-row>
+        <span slot="footer">
+            <el-button @click="dialog_menu_edit = false">取 消</el-button>
+            <el-button type="primary" @click="updateMenu()">确 定</el-button>
+        </span>
+    </el-dialog>
+<!--    编辑菜单 结束-->
+
+
+
+<!--    添加菜单-->
+    <el-dialog
+            title="添加菜单"
+            :visible.sync="dialog_menu_add"
+            width="40%"
+            @close="">
+        <el-row :gutter="0">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_edit_name" placeholder="" size="normal">
+                    <template slot="prepend">菜单名称</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_edit_href" placeholder="" size="normal">
+                    <template slot="prepend">链接</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_edit_sort" type="number" placeholder="" size="normal">
+                    <template slot="prepend">排序值</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="5" :offset="1">
+                <el-upload
+                        class="avatar-uploader"
+                        action="../attachment/upload"
+                        :show-file-list="false"
+                        :on-success="handleAvatarSuccess_icon">
+                    <img v-if="input_edit_icon" :src="'../'+input_edit_icon" class="avatar">
+                    <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+                    <div slot="tip" class="el-upload__tip">图标(常规)</div>
+                </el-upload>
+            </el-col>
+            <el-col :span="5" :offset="1">
+                <el-upload
+                        class="avatar-uploader"
+                        action="../attachment/upload"
+                        :show-file-list="false"
+                        :on-success="handleAvatarSuccess_iconActive">
+                    <img v-if="input_edit_iconActive" :src="'../'+input_edit_iconActive" class="avatar">
+                    <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+                    <div slot="tip" class="el-upload__tip">图标(激活)</div>
+                </el-upload>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <label>父级菜单</label>
+                <el-select v-model="select_edit_parent" placeholder="父级菜单(目录则为一级)" size="normal" style="width: 100%">
+                    <el-option label="目录(一级菜单)" value="0"></el-option>
+                    <el-option v-for="item in menu_list" :label="item.name" :value="item.id"></el-option>
+                </el-select>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <label>所属权限</label>
+                <el-select v-model="select_edit_permission" placeholder="所属权限" size="normal" style="width: 100%">
+                    <el-option label="无需权限" value=""></el-option>
+                    <el-option v-for="permission in Object.keys(allPermission)" :label="allPermission[permission]+'('+permission+')'" :value="permission"></el-option>
+                </el-select>
+            </el-col>
+        </el-row>
+        <span slot="footer">
+            <el-button @click="dialog_menu_add = false">取 消</el-button>
+            <el-button type="primary" @click="addMenu()">确 定</el-button>
+        </span>
+    </el-dialog>
+<!--    添加菜单 结束-->
+
+</div>
+
+<script>
+    var vue = new Vue({
+        el: '#app',
+        data: {
+            menu_path:parent.vue_data.menu_path,
+            menu_list:[],
+            input_search_name:'',
+            dialog_menu_edit:false,
+            dialog_menu_add:false,
+
+            // 权限列表
+            allPermission:{},
+            // 编辑框
+            input_edit_id:'',
+            input_edit_name:'',
+            input_edit_href:'',
+            input_edit_sort:'',
+            input_edit_icon:'',
+            input_edit_iconActive:'',
+            input_edit_permission:'',
+            select_edit_parent:'',
+            select_edit_permission:''
+        },
+        methods: {
+            getMenuList(){
+                $.post('../system/menu/list',{
+                    getAll:true,
+                    name:vue.input_search_name
+                },(data)=>{
+                    if(data.result == 1){
+                        // 处理菜单数据
+                        this.menu_list = data.data;
+                    }
+                })
+            },
+            editMenu(menu){
+                this.input_edit_id = menu.id;
+                this.input_edit_name = menu.name;
+                this.input_edit_href = menu.href;
+                this.input_edit_sort = menu.sort;
+                this.input_edit_icon = menu.icon;
+                this.input_edit_iconActive = menu.iconActive;
+                this.select_edit_parent = menu.pid;
+                this.select_edit_permission = menu.permission;
+                this.dialog_menu_edit = true;
+            },
+            handleAvatarSuccess_icon(data){
+                if(data.result == 1){
+                    this.input_edit_icon = 'attachment/downloadByUuid?uuid='+data.data.uuid
+                    this.myMessage('success','上传成功')
+                }else {
+                    this.myMessage('error',data.msg)
+                }
+            },
+            handleAvatarSuccess_iconActive(data){
+                if(data.result == 1){
+                    this.input_edit_iconActive = 'attachment/downloadByUuid?uuid='+data.data.uuid
+                    this.myMessage('success','上传成功')
+                }else {
+                    this.myMessage('error',data.msg)
+                }
+            },
+            // 获取所有权限列表
+            getAllPermission(){
+                $.post('../system/permission/list',(data)=>{
+                    if(data.result == 1){
+                        vue.allPermission = data.data;
+                    }
+                })
+            },
+            updateMenu(){
+                $.post('../system/menu/update',{
+                    id:this.input_edit_id,
+                    name:this.input_edit_name,
+                    href:this.input_edit_href,
+                    sort:this.input_edit_sort,
+                    icon:this.input_edit_icon,
+                    iconActive:this.input_edit_iconActive,
+                    pid:this.select_edit_parent,
+                    permission:this.select_edit_permission
+                },(data)=>{
+                    if(data.result == 1){
+                        this.dialog_menu_edit = false;
+                        this.myMessage('success',data.msg)
+                        this.getMenuList();
+                    }else {
+                        this.myMessage('error',data.msg)
+                    }
+                })
+            },
+            showAddMenu(){
+                this.input_edit_id = '';
+                this.input_edit_name = '';
+                this.input_edit_href = '';
+                this.input_edit_sort = '';
+                this.input_edit_icon = '';
+                this.input_edit_iconActive = '';
+                this.select_edit_parent = '';
+                this.select_edit_permission = '';
+                this.dialog_menu_add = true;
+            },
+            addMenu(){
+                $.post('../system/menu/add',{
+                    name:this.input_edit_name,
+                    href:this.input_edit_href,
+                    sort:this.input_edit_sort,
+                    icon:this.input_edit_icon,
+                    iconActive:this.input_edit_iconActive,
+                    pid:this.select_edit_parent,
+                    permission:this.select_edit_permission
+                },(data)=>{
+                    if(data.result == 1){
+                        this.dialog_menu_add = false;
+                        this.myMessage('success',data.msg)
+                        this.getMenuList();
+                        parent.vue_data.getMenu()
+                    }else {
+                        this.myMessage('error',data.msg)
+                    }
+                })
+            },
+            deleteMenu(id){
+                this.myConfirm('确认删除','确认永久删除此菜单?',()=>{
+                    $.post('../system/menu/delete',{id:id},(data)=>{
+                        if(data.result == 1){
+                            this.myMessage('success',data.msg)
+                            this.getMenuList();
+                            parent.vue_data.getMenu();
+                        }else {
+                            this.myMessage('error',data.msg)
+                        }
+                    })
+                },()=>{})
+            }
+        }
+    })
+
+
+    elementUiNormalMethod(vue);
+    vue.getMenuList();
+    vue.getAllPermission();
+</script>
+</body>
+</html>

@@ -1,0 +1,964 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <script src="../static/js/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/index.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/My.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        html,body{
+            width: 100%;
+            overflow-x: hidden;
+        }
+        .addPort,
+        .addMount{
+            color: #13ce66;
+            font-size:20px;
+        }
+        .addPort:hover,
+        .addMount:hover{
+            cursor: pointer;
+            color: cornflowerblue;
+        }
+
+        #log_text{
+            width: 100%;
+            height: 600px;
+            background-color: black;
+            resize: none;
+            color: white;
+        }
+
+
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-breadcrumb separator="/">
+                <el-breadcrumb-item v-for="o in menu_path">{{o}}</el-breadcrumb-item>
+            </el-breadcrumb>
+        </el-col>
+    </el-row>
+
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="5" :offset="1">
+            <el-input placeholder="名称" v-model="input_search_name" size="small" @change="" @keyup.enter.native="getServiceList">
+                <template slot="prepend">名称</template>
+            </el-input>
+        </el-col>
+        <el-col :span="5">
+            <el-input placeholder="别名" v-model="input_search_alias" size="small" @change="" @keyup.enter.native="getServiceList">
+                <template slot="prepend">别名</template>
+            </el-input>
+        </el-col>
+        <el-col :span="4">
+            <el-select v-model="input_search_unit_id" placeholder="筛选租户" size="small" filterable style="width: 100%" @change="getServiceList">
+                <el-option label="不筛选租户" value=""></el-option>
+                <el-option v-for="item in unit_list" :key="item.id" :label="item.name" :value="item.id"></el-option>
+            </el-select>
+        </el-col>
+        <el-col :span="4">
+            <el-select v-model="input_search_group_id" placeholder="筛选服务组" size="small" filterable style="width: 100%" @change="getServiceList">
+                <el-option label="不筛选服务组" value=""></el-option>
+                <el-option v-for="item in serviceGroup_list" :key="item.id" :label="item.name" :value="item.id"></el-option>
+            </el-select>
+        </el-col>
+        <el-col :span="2">
+            <el-button style="width: 100%;" type="primary" size="small" @click="">搜索</el-button>
+        </el-col>
+        <el-col :span="2">
+            <el-button style="width: 100%;" type="success" size="small" @click="dialog_add = true">添加</el-button>
+        </el-col>
+    </el-row>
+
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-table :data="service_list"  border stripe size="small" v-loading="loading">
+                <el-table-column width="50"  label="序号" type="index"></el-table-column>
+                <el-table-column width="120" label="租户" prop="unitName"></el-table-column>
+                <el-table-column width="130" label="服务组">
+                    <template slot-scope="scope">
+                        <el-tag v-if="scope.row.groupName != null" size="mini" type="primary">{{scope.row.groupName}}</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column width="150" label="名称" prop="name"></el-table-column>
+                <el-table-column width="150" label="别名" prop="alias"></el-table-column>
+                <el-table-column width="100" label="版本">
+                    <template slot-scope="scope">
+                        {{calcImageVersion(scope.row.imageName)}}
+                    </template>
+                </el-table-column>
+                <el-table-column width="60" label="节点数" prop="nodeNum"></el-table-column>
+                <el-table-column width="100" label="端口">
+                    <template slot-scope="scope">
+                        <el-tag v-if="scope.row.portList != null && scope.row.portList != ''" v-for="item in scope.row.portList.split(',')" size="mini" type="success">{{item}}</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column width="100" label="核心端口">
+                    <template slot-scope="scope">
+                        <el-tag v-if="scope.row.portWeb != null" size="mini" type="success">{{scope.row.portWeb}}</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column width="200" label="挂载路径">
+                    <template slot-scope="scope">
+                        <p v-if="scope.row.mountMap != null && scope.row.mountMap != undefined" v-for="item in JSON.parse(scope.row.mountMap)">
+                            <el-tag size="mini" type="default">{{item.hostPath}}</el-tag>
+                            :
+                            <el-tag size="mini" type="default">{{item.containerPath}}</el-tag>
+                        </p>
+                    </template>
+                </el-table-column>
+                <el-table-column width="80" label="核数限制">
+                    <template slot-scope="scope">
+                        <el-tag v-if="scope.row.maxCpu != 0" size="mini" type="danger">{{scope.row.maxCpu}}</el-tag>
+<!--                        <el-tag v-else size="mini" type="warning">不限制</el-tag>-->
+                    </template>
+                </el-table-column>
+                <el-table-column width="400" label="镜像地址" prop="imageName"></el-table-column>
+
+                <el-table-column width="370" label="操作"  fixed="right">
+                    <template slot-scope="scope">
+                        <el-button size="mini" @click="upgradeService(scope.row)">升级</el-button>
+                        <el-button type="warning" size="mini" @click="serviceLogs(scope.row)">日志</el-button>
+                        <el-button type="success" size="mini" @click="deployService(scope.row)">发布</el-button>
+                        <el-button type="primary" size="mini" @click="editService(scope.row)">编辑</el-button>
+                        <el-button type="danger" size="mini" @click="deleteService(scope.row)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-col>
+    </el-row>
+
+
+    <el-dialog
+            title="添加服务"
+            :visible.sync="dialog_add"
+            width="60%"
+            @close=""
+            v-loading="add_loading">
+        <el-row :gutter="20">
+            <el-col :span="12">
+                <p>所属租户</p>
+                <el-select v-model="input_unit_id" placeholder="请选择租户" size="small" filterable style="width: 100%">
+                    <el-option v-for="item in unit_list" :key="item.id" :label="item.name+'('+item.aliasName+')'" :value="item.id" ></el-option>
+                </el-select>
+            </el-col>
+            <el-col :span="12">
+                <p>所属服务组</p>
+                <el-select v-model="input_group_id" placeholder="请选择服务组" size="small" filterable style="width: 100%" @change="onServiceGroupChange">
+                    <el-option v-for="item in serviceGroup_list" :key="item.id" :label="item.name+'('+item.alias+')'" :value="item.id"></el-option>
+                </el-select>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="12">
+                <p>服务名称</p>
+                <el-input v-model="input_name" placeholder="服务名称" size="small" style="width: 100%"></el-input>
+            </el-col>
+            <el-col :span="12">
+                <p>服务别名</p>
+                <el-input v-model="input_alias" placeholder="服务别名" size="small" style="width: 100%">
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="10">
+                <p>仓库地址</p>
+                <el-select v-model="input_registry" placeholder="请选择仓库" size="small" filterable style="width: 100%" @change="onRegistryChange">
+                    <el-option v-for="item in registry_list" :key="item.id" :label="item.url" :value="item.id"></el-option>
+                </el-select>
+            </el-col>
+            <el-col :span="7">
+                <p>镜像名称</p>
+                <el-select v-model="input_imageName" placeholder="请选择镜像" size="small" filterable style="width: 100%" @change="onImageChange">
+                    <el-option v-for="item in Object.keys(imagesMap)" :key="item" :label="item" :value="item"></el-option>
+                </el-select>
+            </el-col>
+            <el-col :span="7">
+                <p>Tag</p>
+                <el-select v-model="input_tag" placeholder="请选择Tag" size="small" filterable style="width: 100%" @change="">
+                    <el-option v-for="item in tag_list" :key="item" :label="item" :value="item"></el-option>
+                </el-select>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="24">
+                <span>服务端口</span>
+                <i class="el-icon-circle-plus-outline addPort" @click="addPort"></i>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20">
+            <el-col :span="12" class="t-20">
+                <el-radio-group style="width: 100%" v-model="input_primaryPort" v-for="o,i in portMap_list">
+                    <el-input v-model="portMap_list[i].port" placeholder="服务端口" size="small" style="width: 100%">
+                        <template slot="prepend">
+                            <el-radio :label="o.port" >主端口</el-radio >
+                        </template>
+                        <template slot="append">
+                            <el-button type="danger" size="small" icon="el-icon-delete" @click="subPortNode(i)"></el-button>
+                        </template>
+                    </el-input>
+                </el-radio-group>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="24">
+                <span>挂载路径</span>
+                <i class="el-icon-circle-plus-outline addMount" @click="addMount"></i>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20" v-for="o,i in mountMap_list">
+            <el-col :span="10">
+                <el-input v-model="o.hostPath" placeholder="宿主机路径" size="small" style="width: 100%"></el-input>
+            </el-col>
+            <el-col :span="2" style="text-align: center;line-height: 32px">
+                :
+            </el-col>
+            <el-col :span="10">
+                <el-input v-model="o.containerPath" placeholder="容器路径" size="small" style="width: 100%"></el-input>
+            </el-col>
+            <el-col :span="2" style="text-align: center;line-height: 32px">
+                <el-button type="danger" size="small" icon="el-icon-delete" @click="delMount(i)"></el-button>
+            </el-col>
+        </el-row>
+
+        <el-row :gutter="20">
+            <el-col :span="24" class="t-20">
+                <p>核数限制(0为不限制)</p>
+                <el-input-number v-model="input_maxCpu" :min="0" :max="32" size="small"></el-input-number>
+            </el-col>
+        </el-row>
+        <span slot="footer">
+            <el-button type="primary" size="small" @click="addService">添 加</el-button>
+        </span>
+    </el-dialog>
+
+
+<!--    编辑服务-->
+
+    <el-dialog
+            title="编辑服务"
+            :visible.sync="dialog_edit"
+            width="60%"
+            @close=""
+            v-loading="add_loading">
+        <el-row :gutter="20">
+            <el-col :span="12">
+                <p>所属租户</p>
+                <el-select v-model="input_edit_unit_id" placeholder="请选择租户" size="small" filterable style="width: 100%">
+                    <el-option v-for="item in unit_list" :key="item.id" :label="item.name+'('+item.aliasName+')'" :value="item.id" ></el-option>
+                </el-select>
+            </el-col>
+            <el-col :span="12">
+                <p>所属服务组</p>
+                <el-select v-model="input_edit_group_id" placeholder="请选择服务组" size="small" filterable style="width: 100%" @change="onServiceGroupChange">
+                    <el-option label="" value="">不选择服务组</el-option>
+                    <el-option v-for="item in serviceGroup_list" :key="item.id" :label="item.name+'('+item.alias+')'" :value="item.id"></el-option>
+                </el-select>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="12">
+                <p>服务名称</p>
+                <el-input v-model="input_edit_name" placeholder="服务名称" size="small" style="width: 100%"></el-input>
+            </el-col>
+            <el-col :span="12">
+                <p>服务别名</p>
+                <el-input v-model="input_edit_alias" placeholder="服务别名" size="small" style="width: 100%">
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="10">
+                <p>仓库地址</p>
+                <el-select v-model="input_registry" placeholder="请选择仓库" size="small" filterable style="width: 100%" @change="onRegistryChange">
+                    <el-option v-for="item in registry_list" :key="item.id" :label="item.url" :value="item.id"></el-option>
+                </el-select>
+            </el-col>
+            <el-col :span="7">
+                <p>镜像名称</p>
+                <el-select v-model="input_imageName" placeholder="请选择镜像" size="small" filterable style="width: 100%" @change="onImageChange">
+                    <el-option v-for="item in Object.keys(imagesMap)" :key="item" :label="item" :value="item"></el-option>
+                </el-select>
+            </el-col>
+            <el-col :span="7">
+                <p>Tag</p>
+                <el-select v-model="input_tag" placeholder="请选择Tag" size="small" filterable style="width: 100%" @change="">
+                    <el-option v-for="item in tag_list" :key="item" :label="item" :value="item"></el-option>
+                </el-select>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="24">
+                <span>服务端口</span>
+                <i class="el-icon-circle-plus-outline addPort" @click="addPort"></i>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20">
+            <el-col :span="12" class="t-20">
+                <el-radio-group style="width: 100%" v-model="input_edit_primaryPort" v-for="o,i in portMap_list">
+                    <el-input v-model="portMap_list[i].port" placeholder="服务端口" size="small" style="width: 100%">
+                        <template slot="prepend">
+                            <el-radio :label="o.port" >主端口</el-radio >
+                        </template>
+                        <template slot="append">
+                            <el-button type="danger" size="small" icon="el-icon-delete" @click="subPortNode(i)"></el-button>
+                        </template>
+                    </el-input>
+                </el-radio-group>
+            </el-col>
+        </el-row>
+
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="24">
+                <span>挂载路径</span>
+                <i class="el-icon-circle-plus-outline addMount" @click="addMount"></i>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20" v-for="o,i in mountMap_list">
+            <el-col :span="10">
+                <el-input v-model="o.hostPath" placeholder="宿主机路径" size="small" style="width: 100%"></el-input>
+            </el-col>
+            <el-col :span="2" style="text-align: center;line-height: 32px">
+                :
+            </el-col>
+            <el-col :span="10">
+                <el-input v-model="o.containerPath" placeholder="容器路径" size="small" style="width: 100%"></el-input>
+            </el-col>
+            <el-col :span="2" style="text-align: center;line-height: 32px">
+                <el-button type="danger" size="small" icon="el-icon-delete" @click="delMount(i)"></el-button>
+            </el-col>
+        </el-row>
+
+        <el-row :gutter="20">
+            <el-col :span="24" class="t-20">
+                <p>核数限制(0为不限制)</p>
+                <el-input-number v-model="input_edit_maxCpu" :min="0" :max="32" size="small"></el-input-number>
+            </el-col>
+        </el-row>
+        <span slot="footer">
+            <el-button type="primary" size="small" @click="updateService">保 存</el-button>
+        </span>
+    </el-dialog>
+
+
+<!--    发布服务-->
+    <el-dialog
+            title="发布服务至节点"
+            :visible.sync="dialog_deploy"
+            width="50%"
+            @close="">
+        <el-row :gutter="20">
+            <el-col :span="24">
+                <el-radio v-model="deploy_type" label="1">自动发布</el-radio>
+                <el-radio v-model="deploy_type" label="2">手动发布</el-radio>
+            </el-col>
+        </el-row>
+
+<!--        自动发布-->
+        <el-row :gutter="20" class="t-20" v-if="deploy_type == 1">
+            <el-col :span="4">节点数量</el-col>
+            <el-col :span="8">
+                <el-input-number v-model="input_deploy_auto_num" :min="1" placeholder="节点数" size="small" style="width: 100%"></el-input-number>
+            </el-col>
+        </el-row>
+<!--        优先排序顺序-->
+        <el-row :gutter="20" class="t-20" v-if="deploy_type == 1">
+            <el-col :span="4">优先顺序</el-col>
+            <el-col :span="20">
+                <el-radio v-model="deploy_sort_fun" label="1">容器数量少优先</el-radio>
+                <el-radio v-model="deploy_sort_fun" label="2">内存占用少优先</el-radio>
+            </el-col>
+        </el-row>
+
+        <!--        手动发布-->
+        <el-row :gutter="20" class="t-20" v-if="deploy_type == 2">
+            <el-col :span="24">发布到容器</el-col>
+            <el-col :span="24">
+                <el-select v-model="input_node_id" placeholder="请选择节点" size="small" filterable style="width: 100%" @change="onDockerNodeChange">
+                    <el-option v-for="item in docker_node_list" :value="item.id" :label="item.ip">{{item.ip}}({{'CPU:'+item.cpuNum +' 内存'+ (parseFloat(item.memTotal)/1024/1024/1024).toFixed(0)+'G '+ '容器:'+item.containerUpNum}})</el-option>
+                </el-select>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20" v-if="deploy_type == 2">
+            <el-col :span="24">已使用端口</el-col>
+            <el-col :span="24">
+                <el-input type="textarea" :rows="3" placeholder="已使用端口" class="input_deploy_used_port" resize="none" disabled v-model="input_deploy_used_port"></el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20" v-if="deploy_type == 2">
+            <el-col :span="24">发布端口(外部:内部)</el-col>
+            <el-col :span="12">
+                <el-input v-for="o,i in input_deploy_port_map" size="small" v-model="o.out_port">
+                    <template slot="append">
+                        {{o.in_port}}
+                    </template>
+                </el-input>
+            </el-col>
+        </el-row>
+
+
+        <span slot="footer">
+            <el-button type="primary" size="small" @click="deployServiceSave">发 布</el-button>
+        </span>
+    </el-dialog>
+
+
+
+    <el-dialog
+            title="服务所有节点日志"
+            :visible.sync="dialog_log"
+            width="90%"
+            @close="handleLogClose">
+        <el-row :gutter="20">
+            <el-col :span="3" :offset="13">
+                <el-switch v-model="log_status" active-text="获取" @change="handleLogStatus"></el-switch>
+            </el-col>
+            <el-col :span="3">
+                <el-switch v-model="log_scroll" active-text="追踪"> </el-switch>
+            </el-col>
+            <el-col :span="4">
+                <el-input v-model="input_log_line" placeholder="行数" size="mini" style="width: 100%">
+                    <template slot="append">行</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="22" :offset="1">
+                <textarea id="log_text">{{log_content}}</textarea>
+            </el-col>
+        </el-row>
+
+        <span slot="footer">
+            <el-button type="primary" size="small" @click="handleLogClose">关闭</el-button>
+        </span>
+    </el-dialog>
+
+    <el-dialog
+            :title="'升级服务版本(目前：' + this.imageNow.imageName+')'"
+            :visible.sync="dialog_upgrade"
+            width="90%">
+        <el-row :gutter="20">
+            <el-col :span="24">
+                <el-table :data="upgrade_tag_list" border stripe size="small" v-loading="upgrade_loading">
+                    <el-table-column type="index" label="序号"></el-table-column>
+                    <el-table-column prop="mirrorname" label="镜像名" width="150"></el-table-column>
+                    <el-table-column prop="tag" label="标签" width="150"></el-table-column>
+                    <el-table-column prop="digest" label="digest"></el-table-column>
+                    <el-table-column label="操作" width="80">
+                        <template slot-scope="scope">
+                            <el-button type="danger" size="mini" @click="upgradeServiceToTag(scope.row)">升级</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </el-col>
+        </el-row>
+
+        <span slot="footer">
+            <el-button type="primary" size="small" @click="dialog_upgrade = false">关闭</el-button>
+        </span>
+    </el-dialog>
+
+</div>
+
+<script>
+    var vue = new Vue({
+        el: '#app',
+        data:{
+            menu_path:top.vue_data.menu_path,
+            service_list:[],
+            loading:false,
+            unit_list:[],
+            serviceGroup_list:[],
+            registry_list:[],
+            imagesMap:{},
+            tag_list:[],
+            portMap_list:[{
+                port:'',
+                primary:false
+            }],
+            mountMap_list:[],
+            input_search_name:'',
+            input_search_alias:'',
+            input_search_unit_id:'',
+            input_search_group_id:'',
+
+            dialog_add:false,
+            add_loading:false,
+            input_unit_id:'',
+            input_group_id:'',
+            input_name:'',
+            input_alias_perpend:'',
+            input_alias:'',
+            input_registry:'',
+            input_imageName:'',
+            input_tag:'',
+            input_primaryPort:'',
+            input_maxCpu:0,
+
+
+            dialog_edit:false,
+            input_edit_id:'',
+            input_edit_unit_id:'',
+            input_edit_group_id:'',
+            input_edit_name:'',
+            input_edit_alias:'',
+            input_edit_registry:'',
+            input_edit_imageName:'',
+            input_edit_tag:'',
+            input_edit_maxCpu:'',
+            input_edit_primaryPort:'',
+
+            // 发布容器相关
+            input_deploy_service_id:'',
+            dialog_deploy:false,
+            deploy_type:'1',
+            input_deploy_auto_num:0,
+            input_node_id:'',
+            docker_node_list:[],
+            input_deploy_used_port:'',
+            input_deploy_port_map:[],
+            deploy_sort_fun:'1',
+
+            log_service_id:'',
+            dialog_log:false,
+            log_status:false,
+            log_scroll:false,
+            input_log_line:10,
+            log_content:'',
+
+            // 升级相关
+            upgrade_loading:false,
+            dialog_upgrade:false,
+            upgrade_tag_list:[],
+            imageNow:{}
+        },
+        mounted(){
+        },
+        methods:{
+            getUnits(){
+                $.post('getUnits',{},(data)=>{
+                    if(data.result == 1){
+                        vue.unit_list = data.data;
+                    }
+                })
+            },
+            getServiceGroup(){
+                $.post('getServiceGroup',{},(data)=>{
+                    if(data.result == 1){
+                        vue.serviceGroup_list = data.data;
+                    }
+                })
+            },
+            getRegistryList(){
+                add_loading = true;
+                $.post('../registry/getRegList',{},(data)=>{
+                    add_loading = false;
+                    if(data.result == 1){
+                        vue.registry_list = data.data;
+                    }
+                })
+            },
+            onServiceGroupChange(groupId){
+                // 先找到单位
+                var unitaliasName = '';
+                var unitName= '';
+                for(var unit of vue.unit_list){
+                    if(unit.id == vue.input_unit_id){
+                        unitaliasName = unit.aliasName;
+                        unitName = unit.name;
+                        break;
+                    }
+                }
+
+                for(var group of vue.serviceGroup_list){
+                    if(group.id == groupId){
+                        vue.input_alias = group.alias + '_' + unitaliasName;
+                        vue.input_name = unitName + '_' + group.name;
+                        break;
+                    }
+                }
+            },
+            onRegistryChange(){
+                add_loading = true;
+                $.post('../registry/getAllTagsInfo',{
+                    id:vue.input_registry
+                },(data)=>{
+                    add_loading = false;
+                    if(data.result == 1){
+                        vue.imagesMap = data.data;
+                    }
+                })
+            },
+            onImageChange(){
+                vue.tag_list = vue.imagesMap[vue.input_imageName];
+            },
+            addMount(){
+                vue.mountMap_list.push({
+                    hostPath:'',
+                    containerPath:''
+                });
+            },
+            delMount(i){
+                vue.mountMap_list.splice(i,1);
+            },
+            addPort(){
+                vue.portMap_list.push({
+                    port:'',
+                    primary:false
+                });
+            },
+            subPortNode(i){
+                vue.portMap_list.splice(i,1);
+                if(vue.portMap_list.length == 0){
+                    vue.input_edit_primaryPort = '';
+                }
+            },
+            addService(){
+                if(vue.input_unit_id == ''){
+                    this.myMessage('error','请选择单位');
+                    return;
+                }
+                if(vue.input_name == ''){
+                    this.myMessage('error','请输入服务名称');
+                    return;
+                }
+                if(vue.input_alias == ''){
+                    this.myMessage('error','请输入服务别名');
+                    return;
+                }
+                if(vue.input_registry == ''){
+                    this.myMessage('error','请选择镜像仓库');
+                    return;
+                }
+                // 获取仓库地址
+                var registry_url = '';
+                for(var registry of vue.registry_list){
+                    if(registry.id == vue.input_registry){
+                        registry_url = registry.url;
+                        break;
+                    }
+                }
+                var portlist = [];
+                for(var port of vue.portMap_list){
+                    if(port.port == ''){
+                        this.myMessage('error','请输入端口');
+                        return;
+                    }else{
+                        portlist.push(port.port);
+                    }
+                }
+
+                $.post('addService',{
+                    // 租户id
+                    unitId:vue.input_unit_id,
+                    // 服务组id
+                    groupId:vue.input_group_id,
+                    // 服务名称
+                    name:vue.input_name,
+                    // 服务别名
+                    alias:vue.input_alias,
+                    // 镜像仓库地址
+                    imageName:registry_url.replace(/https:\/\//g,'').replace(/http:\/\//g,'') + '/' + vue.input_imageName + ':' + vue.input_tag,
+                    // 主端口
+                    portWeb:vue.input_primaryPort,
+                    // 端口映射
+                    portList:portlist.join(','),
+                    // 核数限制
+                    maxCpu:vue.input_maxCpu,
+                    mountMap:JSON.stringify(vue.mountMap_list)
+                },(data)=>{
+                    if(data.result == 1){
+                        vue.dialog_add = false;
+                        vue.getServiceList();
+                    }else{
+                        this.myMessage('error',data.msg);
+                    }
+                })
+            },
+            getServiceList(){
+                $.post('getServices',{
+                    name:vue.input_search_name,
+                    alias:vue.input_search_alias,
+                    unitId:vue.input_search_unit_id,
+                    groupId:vue.input_search_group_id
+                },(data)=>{
+                    if(data.result == 1){
+                        vue.service_list = data.data;
+                    }
+                })
+            },
+            deleteService(row){
+                this.myConfirm('删除','确定删除该服务？',()=>{
+                    $.post('deleteService',{
+                        id:row.id
+                    },(data)=>{
+                        if(data.result == 1){
+                            vue.getServiceList();
+                            this.myMessage('success','删除成功');
+                        }else {
+                            this.myMessage('error',data.msg);
+                        }
+                    })
+                },()=>{});
+            },
+            editService(row){
+                this.dialog_edit = true;
+                vue.input_edit_id = row.id;
+                this.input_edit_unit_id = row.unitId;
+                this.input_edit_group_id = row.groupId;
+                this.input_edit_name = row.name;
+                this.input_edit_alias = row.alias;
+                for(var registry of vue.registry_list){
+                    if(registry.url.indexOf(row.imageName.split('/')[0]) != -1){
+                        this.input_registry = registry.id;
+                        break;
+                    }
+                }
+
+                this.input_imageName = row.imageName.split('/')[1].split(':')[0];
+                this.input_tag = row.imageName.split('/')[1].split(':')[1];
+                this.input_edit_maxCpu = row.maxCpu;
+                vue.portMap_list = [];
+                row.portList.split(',').forEach((item)=>{
+                    if(parseInt(item) == parseInt(row.portWeb)){
+                        vue.input_edit_primaryPort = item;
+                    }
+                    vue.portMap_list.push({
+                        port:item,
+                        primary:false
+                    });
+                })
+                vue.mountMap_list = JSON.parse(row.mountMap);
+            },
+            updateService(){
+                if(vue.input_edit_unit_id == ''){
+                    this.myMessage('error','请选择单位');
+                    return;
+                }
+                if(vue.input_edit_name == ''){
+                    this.myMessage('error','请输入服务名称');
+                    return;
+                }
+                if(vue.input_edit_alias == ''){
+                    this.myMessage('error','请输入服务别名');
+                    return;
+                }
+                if(vue.input_registry == ''){
+                    this.myMessage('error','请选择镜像仓库');
+                    return;
+                }
+                // 获取仓库地址
+                var registry_url = '';
+                for(var registry of vue.registry_list){
+                    if(registry.id == vue.input_registry){
+                        registry_url = registry.url;
+                        break;
+                    }
+                }
+                var portlist = [];
+                for(var port of vue.portMap_list){
+                    if(port.port == ''){
+                        this.myMessage('error','请输入端口');
+                        return;
+                    }else{
+                        portlist.push(port.port);
+                    }
+                }
+
+                $.post('updateService',{
+                    id:vue.input_edit_id,
+                    // 租户id
+                    unitId:vue.input_edit_unit_id,
+                    // 服务组id
+                    groupId:vue.input_edit_group_id,
+                    // 服务名称
+                    name:vue.input_edit_name,
+                    // 服务别名
+                    alias:vue.input_edit_alias,
+                    // 镜像仓库地址
+                    imageName:registry_url.replace(/https:\/\//g,'').replace(/http:\/\//g,'') + '/' + vue.input_imageName + ':' + vue.input_tag,
+                    // 主端口
+                    portWeb:vue.input_edit_primaryPort,
+                    // 端口映射
+                    portList:portlist.join(','),
+                    // 核数限制
+                    maxCpu:vue.input_edit_maxCpu,
+                    mountMap:JSON.stringify(vue.mountMap_list)
+                },(data)=>{
+                    if(data.result == 1){
+                        vue.dialog_edit = false;
+                        vue.getServiceList();
+                    }else{
+                        this.myMessage('error',data.msg);
+                    }
+                })
+            },
+            calcImageVersion(url){
+                return url.split(':')[2];
+            },
+            getDockerNodeInfo(){
+                $.post('../server/getDockerNodeInfo',(data)=>{
+                    if(data.result == 1){
+                        vue.docker_node_list = data.data;
+                    }
+                })
+            },
+            onDockerNodeChange(){
+                $.post('../server/getDockerNodeUsedPort',{
+                    id:vue.input_node_id
+                },(data)=>{
+                    if(data.result == 1){
+                        vue.input_deploy_used_port = data.data.join(',');
+                    }
+                })
+            },
+            deployService(row){
+                vue.input_deploy_service_id = row.id;
+                vue.input_deploy_port_map = []
+                for(var port of row.portList.split(',')){
+                    vue.input_deploy_port_map.push({
+                        in_port:port,
+                        out_port:''
+                    })
+                }
+                vue.dialog_deploy = true;
+            },
+            deployServiceSave(){
+                if(vue.deploy_type == 1){
+                    // 自动发布
+                    $.post('deployServiceNodeByAuto',{
+                        serviceId:vue.input_deploy_service_id,
+                        dockerId:vue.input_node_id,
+                        deploySortFun:vue.deploy_sort_fun,
+                        deployNum:vue.input_deploy_auto_num
+                    },(data)=>{
+                        if(data.result == 1){
+                            vue.dialog_deploy = false;
+                            vue.getServiceList();
+                            this.myMessage('success',data.msg);
+                        }else{
+                            this.myMessage('error',data.msg);
+                        }
+                    })
+
+                }else if(vue.deploy_type == 2){
+                    // 手动发布
+                    var portWeb = {}
+                    for(var port of vue.input_deploy_port_map){
+                        if(port.out_port == ''){
+                            this.myMessage('error','请输入端口映射');
+                            return;
+                        }
+                        portWeb[port.out_port] = port.in_port;
+                    }
+
+                    $.post('deployServiceNodeByHand',{
+                        serviceId:vue.input_deploy_service_id,
+                        dockerId:vue.input_node_id,
+                        portMap:JSON.stringify(portWeb)
+                    },(data)=>{
+                        if(data.result == 1){
+                            vue.dialog_deploy = false;
+                            vue.getServiceList();
+                            this.myMessage('success',data.msg);
+                        }else{
+                            this.myMessage('error',data.msg);
+                        }
+                    })
+                }
+            },
+            serviceLogs(row){
+                this.log_service_id = row.id;
+                this.dialog_log = true;
+            },
+            handleLogStatus(){
+                if(this.log_status){
+                    this.getServiceAllNodeLogByTail(this.log_service_id,this.input_log_line);
+                    this.log_interval = setInterval(()=>{
+                        this.getServiceAllNodeLogByTail(this.log_service_id,this.input_log_line);
+                    },1500);
+                }else {
+                    this.log_status = false;
+                    clearInterval(this.log_interval);
+                }
+            },
+            getServiceAllNodeLogByTail(serviceId,tail){
+                $.post('getServiceAllNodeLogByTail',{
+                    id:serviceId,
+                    tail:tail
+                },(data)=>{
+                    if(data.result == 1){
+                        this.log_content = data.data.join('\n');
+                        if(this.log_scroll){
+                            $('#log_text').scrollTop(999999);
+                        }
+                    }
+                })
+            },
+            handleLogClose(){
+                this.log_status = false;
+                this.log_content = '';
+                clearInterval(this.log_interval);
+                this.dialog_log = false;
+            },
+            upgradeService(row){
+                this.imageNow = row;
+                this.dialog_upgrade = true;
+                $.post('./getImageAllTag',{
+                    imageName:row.imageName
+                },(data)=>{
+                    if(data.result == 1){
+                        vue.upgrade_tag_list = data.data;
+                    }
+                })
+            },
+            upgradeServiceToTag(toTag){
+                this.myConfirm('升级','确定要升级到('+toTag.tag+')吗？',()=>{
+                    this.upgrade_loading = true;
+                    // 将某个服务升级到某个版本
+                    $.post('./upgradeServiceToTag',{
+                        serviceId:this.imageNow.id,
+                        tag:toTag.tag
+                    },(data)=>{
+                        this.upgrade_loading = false;
+                        if(data.result == 1){
+                            this.myMessage('success',data.msg);
+                            this.dialog_upgrade = false;
+                            this.getServiceList();
+                        }else{
+                            this.myMessage('error',data.msg);
+                        }
+                    })
+                },()=>{})
+            }
+        },
+        mounted(){
+            this.$nextTick(() => {
+                var unitId = getParam('unitId');
+                if(unitId != null && unitId != ''){
+                    vue.input_search_unit_id = parseInt(unitId);
+                }
+                vue.getServiceList();
+            });
+        }
+    });
+
+    elementUiNormalMethod(vue);
+    vue.getUnits();
+    vue.getServiceGroup();
+    vue.getRegistryList();
+    vue.getDockerNodeInfo();
+
+</script>
+</body>
+</html>

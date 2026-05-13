@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>镜像列表</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <script src="../static/js/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/index.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/My.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        body{
+            width: calc(100% - 20px);
+        }
+        .status{
+            cursor: pointer;
+        }
+        .tag_mirror{
+            margin-left: 5px;
+        }
+        .tag_mirror:hover{
+            background-color: #e6e6e6;
+            color: #000;
+            cursor: pointer;
+        }
+        .iframe_taginfo{
+            width: 100%;
+            height: 600px;
+            border: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item>首页</el-breadcrumb-item>
+                    <el-breadcrumb-item>镜像管理</el-breadcrumb-item>
+                </el-breadcrumb>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="13" :offset="1">
+                <el-select size="small" style="width: 100%;" v-model="select_reg" value-key="" placeholder="仓库地址" clearable filterable @change="getMirrorByReg">
+                    <el-option v-for="item in list_reg"
+                        :label="item.url"
+                        :value="JSON.stringify(item)">
+                    </el-option>
+                </el-select>
+            </el-col>
+            <el-col :span="9" :offset="0">
+                <el-input v-model="input_mirror" placeholder="" size="small" @change="" @keyup.native="searchMirror">
+                    <template slot="prepend">
+                        镜像名称
+                    </template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-table :data="Object.keys(table_mirror)" border stripe v-loading="loading_tab" size="small">
+                    <el-table-column type="index" label="序号" width="60"></el-table-column>
+                    <el-table-column label="镜像名称" width="300">
+                        <template slot-scope="scope">
+                            {{scope.row}}
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="镜像Tag">
+                        <template slot-scope="scope">
+                            <el-tag v-for="item in table_mirror[scope.row]" class="tag_mirror" size="mini" @click="pullTab(scope.row,item)">{{item}}</el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="100">
+                        <template slot-scope="scope">
+                            <el-button type="primary" size="mini" @click="tagInfo(scope.row)">详情</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+                
+            </el-col>
+        </el-row>
+
+
+
+        <el-dialog
+            title="镜像详情"
+            :visible.sync="dia_mirrorinfo"
+            width="90%"
+            height="600px"
+            @close="">
+            <template>
+                <iframe class="iframe_taginfo" :src="iframe_url"></iframe>
+            </template>
+        </el-dialog>
+        
+    </div>
+    
+    <script>
+        var vue_app = new Vue({
+            el:'#app',
+            data:{
+                data:[],
+                dia_mirrorinfo:false,
+                select_reg:'',
+                loading_tab:false,
+                list_reg:[],
+                table_mirror:{},
+                table_mirror_bak:{},
+                iframe_url:'',
+                input_mirror:''
+            },
+            methods: {
+                myAlert(title,content,yesCb){
+                    this.$alert(content, title, {
+                        confirmButtonText: '确定',
+                        callback: ()=>{
+                            yesCb();
+                        }
+                    });
+                },
+                myPrompt(title,content,value,cb){
+                    this.$prompt(content, title, {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        inputValue: value,
+                    }).then((e)=>{
+                        if(e.action == 'confirm'){
+                            cb(e.value);
+                        }
+                    }).catch(()=>{});
+                },
+                getMirrorByReg:function(reg){
+                    if(reg == ''|| reg == undefined){
+                        return;
+                    }
+                    this.loading_tab = true;
+                    $.post('getAllTagsInfo',{
+                        id:JSON.parse(reg).id
+                    },(data)=>{
+                        this.loading_tab = false;
+                        if(data.result == 1){
+                            vue_app.table_mirror = data.data;
+                            vue_app.table_mirror_bak = data.data;
+                        }
+                    })
+                },
+                pullTab:function(mirror,tag){
+                    var text = 'docker pull '+ JSON.parse(this.select_reg).url.replace(/http:\/\//g,'').replace(/https:\/\//g,'')
+                        + '/' + mirror + ':' + tag;
+                    this.myPrompt('镜像地址','复制下面文字即可拉取',text,(value)=>{
+                    });
+                },
+                tagInfo:function (mirror){
+                    this.iframe_url = getJumpWithParams('./tag_list.html',{
+                        regId:JSON.parse(this.select_reg).id,
+                        mirror:encodeURIComponent(mirror)
+                    });
+                    this.dia_mirrorinfo = true;
+                },
+                searchMirror:function(){
+                    if(this.input_mirror == '' || this.input_mirror == undefined){
+                        this.table_mirror = this.table_mirror_bak;
+                        return;
+                    }
+                    var arr = {};
+                    for(var o in this.table_mirror_bak){
+                        if(o.indexOf(this.input_mirror) > -1){
+                            arr[o] = this.table_mirror_bak[o];
+                        }
+                    }
+                    this.table_mirror = arr;
+                }
+            },  
+        })
+
+        $(()=>{
+            getList();
+        })
+
+        function getList(){
+            $.post('getRegList',{
+                status:1
+            },(data)=>{
+                vue_app.list_reg = data.data;
+            });
+        }
+
+        function getMirrorList(){
+            vue_app.getMirrorByReg(vue_app.select_reg)
+        }
+        
+    </script>
+</body>
+</html>

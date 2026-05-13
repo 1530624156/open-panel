@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <script src="../static/js/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/index.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/My.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        html,body{
+            width: 100%;
+            overflow-x: hidden;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-breadcrumb separator="/">
+                <el-breadcrumb-item v-for="o in menu_path">{{o}}</el-breadcrumb-item>
+            </el-breadcrumb>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="8" :offset="1">
+            <el-input placeholder="JobName" v-model="search_input_jobname" size="small" @keyup.enter.native="searchJob"></el-input>
+        </el-col>
+        <el-col :span="3" :offset="5">
+            <el-button type="success" size="small" @click="syncJob" style="width: 100%">新增同步</el-button>
+        </el-col>
+        <el-col :span="3">
+            <el-button type="warning" size="small" @click="syncJobHard" style="width: 100%">全量同步</el-button>
+        </el-col>
+        <el-col :span="3">
+            <el-button type="primary" size="small" @click="searchJob" style="width: 100%">筛选</el-button>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-table :data="list"  border stripe size="small" height="800px" class="table_main" v-loading="loading">
+                <el-table-column width="50"  label="序号" type="index"></el-table-column>
+                <el-table-column label="任务名称" prop="jobName"></el-table-column>
+                <el-table-column label="备注" prop="remark"></el-table-column>
+                <el-table-column label="操作">
+                    <template slot-scope="scope">
+                        <el-button type="success" size="mini" @click="buildJobByJobName(scope.row.jobName)">构建</el-button>
+                        <el-button type="primary" size="mini" @click="">编辑</el-button>
+                        <el-button type="danger" size="mini" @click="delJobById(scope.row.id)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-col>
+    </el-row>
+
+</div>
+
+<script>
+    var vue = new Vue({
+        el: '#app',
+        data:{
+            list:[],
+            offset:0,
+            loading:false,
+            menu_path:parent.vue_data.menu_path,
+
+            search_input_jobname:''
+
+        },
+        methods:{
+            getList(){
+                this.loading = true;
+                $.post('./getJenkinsJobListOffset',{
+                    jobName:this.search_input_jobname,
+                    offset:this.offset,
+                    limit:50
+                },(data)=>{
+                    this.loading = false;
+                    if(data.result == 1){
+                        if(data.data.length > 0){
+                            this.list = this.list.concat(data.data);
+                            this.offset = data.data[data.data.length-1].id;
+                        }
+                    }
+                })
+            },
+            searchJob(){
+                this.offset = 0;
+                this.list = [];
+                this.getList();
+            },
+            syncJob(){
+                $.post('./syncJob',{},(data)=>{
+                    if(data.result == 1){
+                        this.$message.success(data.msg);
+                        this.searchJob();
+                    }else {
+                        this.$message.error(data.msg);
+                    }
+                })
+            },
+            syncJobHard(){
+                this.myConfirm('确认','确定全量同步吗（先删除所有Job再同步）',()=>{
+                    $.post('./syncJobHard',{},(data)=>{
+                        if(data.result == 1){
+                            this.$message.success(data.msg);
+                            this.searchJob();
+                        }else {
+                            this.$message.error(data.msg);
+                        }
+                    })
+                },()=>{})
+            },
+            delJobById(id){
+                this.myConfirm('确认','确定删除该条记录吗（不会影响JenkinsJob本身）',()=>{
+                    $.post('./delJobById',{
+                        id:id
+                    },(data)=>{
+                        if(data.result == 1){
+                            this.$message.success(data.msg);
+                            this.searchJob();
+                        }else {
+                            this.$message.error(data.msg);
+                        }
+                    })
+                },()=>{})
+            },
+            buildJobByJobName(jobName){
+                 $.post('./buildJobByJobName',{
+                     jobName
+                },(data)=>{
+                    if(data.result == 1){
+                        this.$message.success(data.msg);
+                    }else {
+                        this.$message.error(data.msg);
+                    }
+                })
+            }
+        },
+        mounted() {
+            this.getList();
+            scrollEndCallback('.el-table__body-wrapper',()=>{
+                this.getList();
+            })
+        }
+
+    });
+    elementUiNormalMethod(vue);
+
+    function scrollEndCallback(select, cb, delay = 200) {
+        let timer = null;
+        $(select)[0].addEventListener("scroll", function () {
+            var table = this; // 或者用 $(select)[0]
+            // 清除之前的定时器
+            if (timer) clearTimeout(timer);
+            // 设置新的定时器
+            timer = setTimeout(() => {
+                if (table.scrollHeight - (table.scrollTop + table.clientHeight) < 10) {
+                    cb();
+                }
+            }, delay);
+        });
+    }
+
+</script>
+</body>
+</html>

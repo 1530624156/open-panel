@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mavis.mypanel.dao.TServiceGroupDao">
+
+    <resultMap type="com.mavis.mypanel.entity.TServiceGroup" id="TServiceGroupMap">
+        <result property="id" column="id" jdbcType="INTEGER"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="alias" column="alias" jdbcType="VARCHAR"/>
+        <result property="remark" column="remark" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <!-- 批量插入 -->
+    <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_service_group(namealiasremark)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+        (#{entity.name}#{entity.alias}#{entity.remark})
+        </foreach>
+    </insert>
+    <!-- 批量插入或按主键更新 -->
+    <insert id="insertOrUpdateBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_service_group(namealiasremark)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.name}#{entity.alias}#{entity.remark})
+        </foreach>
+        on duplicate key update
+name = values(name) alias = values(alias) remark = values(remark)     </insert>
+
+</mapper>
+

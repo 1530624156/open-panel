@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <script src="../static/js/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/index.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/My.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-breadcrumb separator="/">
+                <el-breadcrumb-item v-for="o in menu_path">{{o}}</el-breadcrumb-item>
+            </el-breadcrumb>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="6" :offset="1">
+            <el-input placeholder="名称" v-model="input_search_group_service_name" size="small" @change="" @keyup.enter.native="getServiceGroups">
+                <template slot="prepend">名称</template>
+            </el-input>
+        </el-col>
+        <el-col :span="6">
+            <el-input placeholder="别名" v-model="input_search_group_service_alias" size="small" @change="" @keyup.enter.native="getServiceGroups">
+                <template slot="prepend">别名</template>
+            </el-input>
+        </el-col>
+        <el-col :span="6">
+            <el-input placeholder="备注" v-model="input_search_group_service_remark" size="small" @change="" @keyup.enter.native="getServiceGroups">
+                <template slot="prepend">备注</template>
+            </el-input>
+        </el-col>
+        <el-col :span="2">
+            <el-button style="width: 100%;" type="primary" size="small" @click="getServiceGroups">搜索</el-button>
+        </el-col>
+        <el-col :span="2">
+            <el-button style="width: 100%;" type="success" size="small" @click="dialog_add = true">添加</el-button>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-table :data="serviceGroupList"  border stripe size="small">
+                <el-table-column width="50"  label="序号" type="index"></el-table-column>
+                <el-table-column prop="name" label="名称"></el-table-column>
+                <el-table-column prop="alias" label="别名"></el-table-column>
+                <el-table-column prop="remark" label="备注"></el-table-column>
+                <el-table-column width="150" label="操作">
+                    <template slot-scope="scope">
+                        <el-button type="primary" size="mini" @click="editServiceGroup(scope.row)">编辑</el-button>
+                        <el-button type="danger" size="mini" @click="deleteServiceGroup(scope.row)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-col>
+    </el-row>
+
+
+    <el-dialog
+            title="添加服务组"
+            :visible.sync="dialog_add"
+            width="40%"
+            @close="">
+        <el-row :gutter="0">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_name" placeholder="" size="small">
+                    <template slot="prepend">名称</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_alias" placeholder="" size="small">
+                    <template slot="prepend">别名</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_remark" placeholder="" size="small">
+                    <template slot="prepend">备注</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <span slot="footer">
+            <el-button type="primary" size="small" @click="addServiceGroup">确 定</el-button>
+        </span>
+    </el-dialog>
+
+    <el-dialog
+            title="修改服务组"
+            :visible.sync="dialog_edit"
+            width="40%"
+            @close="">
+        <el-row :gutter="0">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="edit_input_name" placeholder="" size="small">
+                    <template slot="prepend">名称</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="edit_input_alias" placeholder="" size="small">
+                    <template slot="prepend">别名</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <el-row :gutter="0" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="edit_input_remark" placeholder="" size="small">
+                    <template slot="prepend">备注</template>
+                </el-input>
+            </el-col>
+        </el-row>
+        <span slot="footer">
+            <el-button type="primary" size="small" @click="updateServiceGroup">保 存</el-button>
+        </span>
+    </el-dialog>
+
+</div>
+
+<script>
+    var vue = new Vue({
+        el: '#app',
+        data:{
+            menu_path:parent.vue_data.menu_path,
+            input_search_name:'',
+
+            input_search_group_service_name:'',
+            input_search_group_service_alias:'',
+            input_search_group_service_remark:'',
+            serviceGroupList:[],
+
+            dialog_add:false,
+            dialog_edit:false,
+            input_name:'',
+            input_alias:'',
+            input_remark:'',
+
+
+            edit_id:'',
+            edit_input_name:'',
+            edit_input_alias:'',
+            edit_input_remark:''
+        },
+        methods:{
+            getServiceGroups(){
+                $.post('getServiceGroup',{
+                    name: vue.input_search_group_service_name,
+                    alias: vue.input_search_group_service_alias,
+                    remark: vue.input_search_group_service_remark
+                    },(data)=>{
+                    if(data.result == 1){
+                        vue.serviceGroupList = data.data;
+                    }
+                })
+            },
+            addServiceGroup(){
+                $.post('addServiceGroup',{
+                    name: vue.input_name,
+                    alias: vue.input_alias,
+                    remark: vue.input_remark
+                },(data)=>{
+                    if(data.result == 1){
+                        vue.dialog_add = false;
+                        this.myMessage('success',data.msg);
+                        vue.getServiceGroups();
+                    }else {
+                        this.myMessage('error',data.msg);
+                    }
+                })
+            },
+            editServiceGroup(row){
+                vue.edit_id = row.id;
+                vue.edit_input_name = row.name;
+                vue.edit_input_alias = row.alias;
+                vue.edit_input_remark = row.remark;
+                vue.dialog_edit = true;
+            },
+            updateServiceGroup(){
+                $.post('updateServiceGroup',{
+                    id: vue.edit_id,
+                    name: vue.edit_input_name,
+                    alias: vue.edit_input_alias,
+                    remark: vue.edit_input_remark
+                },(data)=>{
+                    if(data.result == 1){
+                        vue.dialog_edit = false;
+                        this.myMessage('success',data.msg);
+                        vue.getServiceGroups();
+                    }else {
+                        this.myMessage('error',data.msg);
+                   }
+                })
+            },
+            deleteServiceGroup(row){
+                this.myConfirm('删除服务组',`确定删除服务组【${row.name}】？`,()=>{
+                    $.post('deleteServiceGroup',{
+                        id: row.id
+                    },(data)=>{
+                        if(data.result == 1){
+                            this.myMessage('success',data.msg);
+                            vue.getServiceGroups();
+                        }else {
+                            this.myMessage('error',data.msg);
+                       }
+                    }
+                    )
+                },()=>{})
+            }
+        }
+    });
+    elementUiNormalMethod(vue);
+    vue.getServiceGroups();
+
+</script>
+</body>
+</html>

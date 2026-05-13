@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mavis.mypanel.dao.TSystemUserGroupDao">
+
+    <resultMap type="com.mavis.mypanel.entity.TSystemUserGroup" id="TSystemUserGroupMap">
+        <result property="id" column="id" jdbcType="INTEGER"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="permissions" column="permissions" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <!-- 批量插入 -->
+    <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_system_user_group(namepermissions)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+        (#{entity.name}#{entity.permissions})
+        </foreach>
+    </insert>
+    <!-- 批量插入或按主键更新 -->
+    <insert id="insertOrUpdateBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_system_user_group(namepermissions)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.name}#{entity.permissions})
+        </foreach>
+        on duplicate key update
+name = values(name) permissions = values(permissions)     </insert>
+
+
+    <select id="selectUserGroupCount" resultType="com.mavis.mypanel.entity.vo.UserGroupCountVo">
+        SELECT
+            ug.*,
+            count(ugb.id) as count
+        FROM
+            t_system_user_group ug
+            left join t_system_user_group_bind ugb  on ug.id = ugb.group_id
+        GROUP BY ug.id
+    </select>
+
+</mapper>
+

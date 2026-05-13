@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mavis.mypanel.dao.TServerDao">
+
+    <resultMap type="com.mavis.mypanel.entity.TServer" id="TServerMap">
+        <result property="id" column="id" jdbcType="INTEGER"/>
+        <result property="ip" column="ip" jdbcType="VARCHAR"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="cpu" column="cpu" jdbcType="VARCHAR"/>
+        <result property="ram" column="ram" jdbcType="VARCHAR"/>
+        <result property="tags" column="tags" jdbcType="VARCHAR"/>
+        <result property="remark" column="remark" jdbcType="VARCHAR"/>
+        <result property="username" column="username" jdbcType="VARCHAR"/>
+        <result property="password" column="password" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <!-- 批量插入 -->
+    <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_server(ipnamecpuramtagsremarkusernamepassword)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+        (#{entity.ip}#{entity.name}#{entity.cpu}#{entity.ram}#{entity.tags}#{entity.remark}#{entity.username}#{entity.password})
+        </foreach>
+    </insert>
+    <!-- 批量插入或按主键更新 -->
+    <insert id="insertOrUpdateBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_server(ipnamecpuramtagsremarkusernamepassword)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.ip}#{entity.name}#{entity.cpu}#{entity.ram}#{entity.tags}#{entity.remark}#{entity.username}#{entity.password})
+        </foreach>
+        on duplicate key update
+ip = values(ip) name = values(name) cpu = values(cpu) ram = values(ram) tags = values(tags) remark = values(remark) username = values(username) password = values(password)     </insert>
+
+</mapper>
+

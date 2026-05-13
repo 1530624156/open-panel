@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <script src="../static/js/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/index.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/My.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        .server-tag{
+            margin-left: 2px;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-breadcrumb separator="/">
+                <el-breadcrumb-item v-for="o in menu_path">{{o}}</el-breadcrumb-item>
+            </el-breadcrumb>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="8" :offset="1">
+            <el-input placeholder="模板名称" v-model="input_search_name" size="small" @change="" @keyup.enter.native="
+">
+                <template slot="prepend">模板名称</template>
+            </el-input>
+        </el-col>
+        <el-col :span="3" :offset="8">
+            <el-button style="width: 100%;" type="primary" size="small" @click="getUserTemplateList">搜索</el-button>
+        </el-col>
+        <el-col :span="3">
+            <el-button style="width: 100%;" type="success" size="small" @click="dialog_add = true">添加</el-button>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-table :data="list"  border stripe size="small" >
+                <el-table-column width="50"  label="序号" type="index"></el-table-column>
+                <el-table-column label="名称" prop="name"></el-table-column>
+                <el-table-column label="类型" prop="type">
+                    <template slot-scope="scope">
+                        <el-tag v-if="scope.row.type == 1" class="server-tag" type="primary" size="mini">账号密码</el-tag>
+                        <el-tag v-if="scope.row.type == 2" class="server-tag" type="danger" size="mini">SSH私钥</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column label="账号" prop="username"></el-table-column>
+                <el-table-column label="密码" prop="password"></el-table-column>
+                <el-table-column label="备注" prop="remark"></el-table-column>
+                <el-table-column label="操作">
+                    <template slot-scope="scope">
+                        <el-button type="primary" size="mini" @click="editUserTemplate(scope.row)">编辑</el-button>
+                        <el-button type="danger" size="mini" @click="deleteUserTemplate(scope.row.id)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-col>
+    </el-row>
+
+
+
+    <!--    添加开始-->
+    <el-dialog
+            title="添加账号模板"
+            :visible.sync="dialog_add"
+            width="40%"
+            @close="">
+        <el-row :gutter="0">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_name" placeholder="" size="small">
+                    <template slot="prepend">模板名称</template>
+                </el-input>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20">
+                <el-select v-model="input_type" placeholder="用户模板类型" size="small" style="width: 100%">
+                    <el-option disabled value="">请选择用户模板类型</el-option>
+                    <el-option value="1" label="账号密码">账号密码</el-option>
+                    <el-option value="2" label="私钥">私钥</el-option>
+                </el-select>
+            </el-col>
+            <!--            账号密码-->
+            <el-col :span="22" :offset="1" class="t-20" v-if="input_type == 1">
+                <el-input v-model="input_username" placeholder="" size="small">
+                    <template slot="prepend">账号</template>
+                </el-input>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20" v-if="input_type == 1">
+                <el-input v-model="input_password" placeholder="" size="small">
+                    <template slot="prepend">密码</template>
+                </el-input>
+            </el-col>
+            <!--            私钥密码-->
+            <el-col :span="22" :offset="1" class="t-20" v-if="input_type == 2">
+                <el-upload
+                        class="upload-demo"
+                        action="../attachment/upload"
+                        :on-success="handleSuccess"
+                        :on-remove="handleRemove"
+                        :limit="1">
+                    <el-button size="small" type="primary">点击上传</el-button>
+                </el-upload>
+            </el-col>
+
+            <el-col :span="22" :offset="1" class="t-20" v-if="input_type == 2">
+                <el-input v-model="input_username" placeholder="" size="small">
+                    <template slot="prepend">账号</template>
+                </el-input>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20" v-if="input_type == 2">
+                <el-input v-model="input_password" placeholder="" size="small">
+                    <template slot="prepend">私钥密码(无密码则空)</template>
+                </el-input>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20">
+                <el-input v-model="input_remark" placeholder="" size="small">
+                    <template slot="prepend">备注</template>
+                </el-input>
+            </el-col>
+
+        </el-row>
+
+        <span slot="footer">
+            <el-button type="primary" size="small" @click="addUserTemplate">确 定</el-button>
+        </span>
+    </el-dialog>
+    <!--    添加结束-->
+
+<!--    编辑开始-->
+
+    <el-dialog
+            title="编辑账号模板"
+            :visible.sync="dialog_edit"
+            width="40%"
+            @close="">
+        <el-row :gutter="0">
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_edit_name" placeholder="" size="small">
+                    <template slot="prepend">模板名称</template>
+                </el-input>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20">
+                <el-select v-model="input_edit_type" placeholder="用户模板类型" size="small" style="width: 100%">
+                    <el-option disabled value="">请选择用户模板类型</el-option>
+                    <el-option value="1" label="账号密码">账号密码</el-option>
+                    <el-option value="2" label="私钥">私钥</el-option>
+                </el-select>
+            </el-col>
+            <!--            账号密码-->
+            <el-col :span="22" :offset="1" class="t-20" v-if="input_edit_type == 1">
+                <el-input v-model="input_edit_username" placeholder="" size="small">
+                    <template slot="prepend">账号</template>
+                </el-input>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20" v-if="input_edit_type == 1">
+                <el-input v-model="input_edit_password" placeholder="" size="small">
+                    <template slot="prepend">密码</template>
+                </el-input>
+            </el-col>
+            <!--            私钥密码-->
+            <el-col :span="22" :offset="1" class="t-20" v-if="input_edit_type == 2">
+                <el-upload
+                        class="upload-demo"
+                        action="../attachment/upload"
+                        :on-success="handleSuccess"
+                        :on-remove="handleRemove"
+                        :limit="1">
+                    <el-button size="small" type="primary">点击上传</el-button>
+                </el-upload>
+            </el-col>
+
+            <el-col :span="22" :offset="1" class="t-20" v-if="input_edit_type == 2">
+                <el-input v-model="input_edit_username" placeholder="" size="small">
+                    <template slot="prepend">账号</template>
+                </el-input>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20" v-if="input_edit_type == 2">
+                <el-input v-model="input_edit_password" placeholder="" size="small">
+                    <template slot="prepend">私钥密码(无密码则空)</template>
+                </el-input>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20">
+                <el-input v-model="input_edit_remark" placeholder="" size="small">
+                    <template slot="prepend">备注</template>
+                </el-input>
+            </el-col>
+
+        </el-row>
+
+        <span slot="footer">
+            <el-button type="primary" size="small" @click="updateUserTemplate">确 定</el-button>
+        </span>
+    </el-dialog>
+<!--    编辑结束-->
+
+</div>
+
+<script>
+    var vue = new Vue({
+        el: '#app',
+        data:{
+            menu_path:parent.vue_data.menu_path,
+            list:[],
+            dialog_add:false,
+            dialog_edit:false,
+            input_search_name:'',
+
+            input_name:'',
+            input_type:'',
+            input_username:'',
+            input_password:'',
+            input_remark:'',
+            input_pem_attachment_uuid:'',
+
+            input_edit_id:'',
+            input_edit_name:'',
+            input_edit_type:'',
+            input_edit_username:'',
+            input_edit_password:'',
+            input_edit_username:'',
+            input_edit_password:'',
+            input_edit_remark:''
+        },
+        methods:{
+            getUserTemplateList(){
+                $.post('getUserTemplateList',{
+                    name:vue.input_search_name
+                },(data)=>{
+                    if(data.result == 1){
+                        vue.list = data.data;
+                    }
+                })
+
+            },
+            handleSuccess(res,file,filelist){
+                if(res.result == 1){
+                    vue.input_pem_attachment_uuid = res.data.uuid;
+                }
+            },
+            handleRemove(file, fileList) {
+                vue.input_pem_attachment_uuid = '';
+            },
+            addUserTemplate(){
+                $.post('addUserTemplate',{
+                    name:vue.input_name,
+                    type:vue.input_type,
+                    username:vue.input_username,
+                    password:vue.input_password,
+                    remark:vue.input_remark,
+                    pemAttachmentUuid:vue.input_pem_attachment_uuid
+                },(data)=>{
+                    if(data.result == 1){
+                        vue.dialog_add = false;
+                        vue.getUserTemplateList();
+                        this.myMessage('success',data.msg);
+                    }else {
+                        this.myMessage('error',data.msg);
+                    }
+                })
+            },
+            deleteUserTemplate(id){
+                this.myConfirm('确认','确定删除该账号模板?',()=>{
+                    $.post('deleteUserTemplate',{
+                        id:id
+                    },(data)=>{
+                        if(data.result == 1){
+                            vue.getUserTemplateList();
+                            this.myMessage('success',data.msg);
+                        }else {
+                            this.myMessage('error',data.msg);
+                        }
+                    })
+                },()=>{})
+            },
+            editUserTemplate(row){
+                vue.input_edit_name = row.name;
+                vue.input_edit_type = row.type+'';
+                vue.input_edit_username = row.username;
+                vue.input_edit_password = row.password;
+                vue.input_edit_remark = row.remark;
+                vue.input_edit_id = row.id;
+                vue.input_pem_attachment_uuid = row.pemAttachmentUuid;
+                vue.dialog_edit = true;
+            },
+            updateUserTemplate(){
+                $.post('updateUserTemplate',{
+                    id:vue.input_edit_id,
+                    name:vue.input_edit_name,
+                    type:vue.input_edit_type,
+                    username:vue.input_edit_username,
+                    password:vue.input_edit_password,
+                    remark:vue.input_edit_remark,
+                    pemAttachmentUuid:vue.input_pem_attachment_uuid
+                },(data)=>{
+                    if(data.result == 1){
+                        vue.dialog_edit = false;
+                        vue.getUserTemplateList();
+                       this.myMessage('success',data.msg);
+                    }else {
+                        this.myMessage('error',data.msg);
+                    }
+                })
+            }
+        }
+    });
+
+    elementUiNormalMethod(vue);
+    vue.getUserTemplateList();
+
+
+</script>
+</body>
+</html>

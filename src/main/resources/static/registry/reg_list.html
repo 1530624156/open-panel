@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title></title>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <script src="../static/js/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/index.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/My.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        body{
+            width: calc(100% - 20px);
+        }
+        .status{
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item>首页</el-breadcrumb-item>
+                    <el-breadcrumb-item>仓库管理</el-breadcrumb-item>
+                </el-breadcrumb>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="10" :offset="1">
+                <el-input v-model="input_url" placeholder="" size="small" clearable @change="" @keyup.enter.native="search">
+                    <template slot="prepend">仓库地址</template>
+                </el-input>
+            </el-col>
+            <el-col :span="2" :offset="8">
+                <el-button style="width: 100%;" type="primary" size="small" @click="search()">搜索</el-button>
+            </el-col>
+            <el-col :span="2">
+                <el-button style="width: 100%;" type="success" size="small" @click="dia_addReg=true">添加</el-button>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-table size="small" :data="data" border stripe v-loading="loading">
+                    <el-table-column label="仓库地址" prop="url" ></el-table-column>
+                    <el-table-column label="账号" prop="username" width="150"></el-table-column>
+                    <el-table-column label="密码" prop="password" width="150"></el-table-column>
+                    <el-table-column label="状态" prop="status" width="100">
+                        <template slot-scope="scope">
+                            <el-tag size="small" class="status" @click="testReg(scope.row)" v-if="scope.row.status==1" type="success">正常</el-tag>
+                            <el-tag size="small" class="status" @click="testReg(scope.row)" v-else-if="scope.row.status==0" type="danger">无效</el-tag>
+                            <el-tag size="small" class="status" @click="testReg(scope.row)" v-else type="warning">待测试</el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="200">
+                        <template slot-scope="scope">
+                            <el-button type="" size="mini" @click="editReg(scope.row)">编辑</el-button>
+                            <el-button type="danger" size="mini" @click="delRegById(scope.row)">删除</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+                
+            </el-col>
+            
+        </el-row>
+
+        <!--        添加弹窗-->
+        <el-dialog
+                title="添加仓库"
+                :visible.sync="dia_addReg"
+                width="40%"
+                @close="">
+
+            <el-row :gutter="20">
+                <el-col :span="22" :offset="1">
+                    <el-input class="input-with-select" v-model="input_addreg_url" placeholder="xxx.xxx.xxx.xxx:5000" size="normal" clearable @change="">
+                        <el-select style="width: 96px;" v-model="select_addreg_prefix" slot="prepend" placeholder="协议">
+                            <el-option label="http://" value="http://"></el-option>
+                            <el-option label="https://" value="https://"></el-option>
+                        </el-select>
+                    </el-input>
+                </el-col>
+                <el-col :span="22" :offset="1" class="t-20">
+                    <el-input v-model="input_addreg_username" size="normal" clearable @change="">
+                        <template slot="prepend">仓库账号</template>
+                    </el-input>
+                </el-col>
+                <el-col :span="22" :offset="1" class="t-20">
+                    <el-input v-model="input_addreg_password" size="normal" clearable @change="">
+                        <template slot="prepend">仓库密码</template>
+                    </el-input>
+                </el-col>
+                <el-col :span="22" :offset="1" class="t-20">
+                    <el-button style="width: 100%;" type="success" size="default" @click="addRegistry()">添加仓库</el-button>
+                </el-col>
+            </el-row>
+            <span slot="footer">
+            </span>
+        </el-dialog>
+
+        <!--        编辑弹窗-->
+        <el-dialog
+                title="编辑仓库"
+                :visible.sync="dia_editReg"
+                width="40%"
+                @close="">
+
+            <el-row :gutter="20">
+                <el-col :span="22" :offset="1">
+                    <el-input class="input-with-select" v-model="edit_addreg_url" placeholder="xxx.xxx.xxx.xxx:5000" size="normal" clearable @change="">
+                        <el-select style="width: 96px;" v-model="edit_select_addreg_prefix" slot="prepend" placeholder="协议">
+                            <el-option label="http://" value="http://"></el-option>
+                            <el-option label="https://" value="https://"></el-option>
+                        </el-select>
+                    </el-input>
+                </el-col>
+                <el-col :span="22" :offset="1" class="t-20">
+                    <el-input v-model="edit_addreg_username" size="normal" clearable @change="">
+                        <template slot="prepend">仓库账号</template>
+                    </el-input>
+                </el-col>
+                <el-col :span="22" :offset="1" class="t-20">
+                    <el-input v-model="edit_addreg_password" size="normal" clearable @change="">
+                        <template slot="prepend">仓库密码</template>
+                    </el-input>
+                </el-col>
+                <el-col :span="22" :offset="1" class="t-20">
+                    <el-button style="width: 100%;" type="success" size="default" @click="saveEditReg">保存编辑</el-button>
+                </el-col>
+            </el-row>
+            <span slot="footer">
+            </span>
+        </el-dialog>
+
+
+    </div>
+    
+    <script>
+        var vue_app = new Vue({
+            el:'#app',
+            data:{
+                data:[],
+                loading:false,
+                dia_addReg:false,
+                dia_editReg:false,
+                input_url:'',
+                input_addreg_url:'',
+                input_addreg_username:'',
+                input_addreg_password:'',
+                select_addreg_prefix:'',
+                edit_select_addreg_prefix:'',
+                edit_addreg_url:'',
+                edit_addreg_username:'',
+                edit_addreg_password:''
+            },
+            methods: {
+                // type[success,warning,info,error]
+                myMessage(type,message,duration){
+                    if(duration==undefined || duration==null){duration = 1500;}
+                    this.$message({type,message,duration});
+                },
+                myConfirm(title,content,yesCb,noCb){
+                    this.$confirm(content, title, {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        callback: (e)=>{
+                            switch(e){
+                                case 'confirm':yesCb();break;
+                                case 'cancel':noCb();break;
+                            }
+                        }
+                    });
+                },
+                addRegistry:function(){
+                    if(this.select_addreg_prefix == null || this.select_addreg_prefix == ''){
+                        this.myMessage('error','请选择仓库地址协议');
+                        return;
+                    }
+                    $.post('addReg',{
+                        url:this.select_addreg_prefix + this.input_addreg_url,
+                        username:this.input_addreg_username,
+                        password:this.input_addreg_password
+                    },(data)=>{
+                        // 重置输入框
+                        this.input_addreg_url = '';
+                        this.input_addreg_username = '';
+                        this.input_addreg_password = '';
+                        this.select_addreg_prefix = '';
+
+                        if(data.result == 1){
+                            this.myMessage('success','添加仓库成功');
+                            vue_app.dia_addReg = false;
+                            vue_app.getList();
+                        }else {
+                            this.myMessage('error',data.msg);
+                        }
+                    })
+                },
+                getList:function () {
+                    loading = true;
+                    $.post('getRegList',(data)=>{
+                        if(data.result == 1){
+                            loading = false;
+                            vue_app.data = data.data;
+                        }
+                    })
+                },
+                delRegById:function (e){
+                    this.myConfirm('确认','确定删除该仓库?',()=>{
+                        $.post('delRegById',{
+                            id:e.id
+                        },(data)=>{
+                            this.myMessage('success',data.msg);
+                            if(data.result == 1){
+                                vue_app.getList();
+                            }
+                        })
+                    },()=>{})
+                },
+                search:function () {
+                    $.post('getRegList',{
+                        url:this.input_url
+                    },(data)=>{
+                        if(data.result == 1){
+                            vue_app.data = data.data;
+                        }
+                    })
+                },
+                testReg:function (row){
+                    this.loading = true;
+                    $.post('testReg',row,(data)=>{
+                        this.loading = false;
+                        if(data.result == 1){
+                            this.myMessage('success',data.msg);
+                        }else {
+                            this.myMessage('error',data.msg);
+                        }
+                        this.getList();
+                    })
+                },
+                editReg:function (row){
+                    if(row.url.indexOf('https://') != -1){
+                        this.edit_select_addreg_prefix = 'https://';
+                        this.edit_addreg_url = row.url.replace(/https:\/\//g,'');
+                    }else {
+                        this.edit_select_addreg_prefix = 'http://';
+                        this.edit_addreg_url = row.url.replace(/http:\/\//g,'');
+                    }
+                    this.edit_addreg_username = row.username;
+                    this.edit_addreg_password = row.password;
+                    this['edit_id'] = row.id;
+                    this.dia_editReg = true;
+                },
+                saveEditReg:function (){
+                    $.post('editRegById',{
+                        id:this.edit_id,
+                        url:this.edit_select_addreg_prefix + this.edit_addreg_url,
+                        username:this.edit_addreg_username,
+                        password:this.edit_addreg_password
+                    },(data)=>{
+                        if(data.result == 1){
+                            this.myMessage('success',data.msg);
+                            vue_app.dia_editReg = false;
+                            vue_app.getList();
+                        }else {
+                            this.myMessage('error',data.msg);
+                        }
+                    })
+                }
+            },
+        })
+
+        $(()=>{
+            vue_app.getList();
+        })
+    </script>
+    
+</body>
+</html>

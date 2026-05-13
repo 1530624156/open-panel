@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mavis.mypanel.dao.TSystemParamDao">
+
+    <resultMap type="com.mavis.mypanel.entity.TSystemParam" id="TSystemParamMap">
+        <result property="id" column="id" jdbcType="INTEGER"/>
+        <result property="paramId" column="param_id" jdbcType="VARCHAR"/>
+        <result property="paramValue" column="param_value" jdbcType="VARCHAR"/>
+        <result property="paramName" column="param_name" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <!-- 批量插入 -->
+    <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_system_param(param_idparam_valueparam_name)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+        (#{entity.paramId}#{entity.paramValue}#{entity.paramName})
+        </foreach>
+    </insert>
+    <!-- 批量插入或按主键更新 -->
+    <insert id="insertOrUpdateBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_system_param(param_idparam_valueparam_name)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.paramId}#{entity.paramValue}#{entity.paramName})
+        </foreach>
+        on duplicate key update
+param_id = values(param_id) param_value = values(param_value) param_name = values(param_name)     </insert>
+
+</mapper>
+

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mavis.mypanel.dao.TSystemUserDao">
+
+    <resultMap type="com.mavis.mypanel.entity.TSystemUser" id="TSystemUserMap">
+        <result property="id" column="id" jdbcType="INTEGER"/>
+        <result property="username" column="username" jdbcType="VARCHAR"/>
+        <result property="password" column="password" jdbcType="VARCHAR"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="tel" column="tel" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <!-- 批量插入 -->
+    <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_system_user(usernamepasswordnametel)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+        (#{entity.username}#{entity.password}#{entity.name}#{entity.tel})
+        </foreach>
+    </insert>
+    <!-- 批量插入或按主键更新 -->
+    <insert id="insertOrUpdateBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_system_user(usernamepasswordnametel)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.username}#{entity.password}#{entity.name}#{entity.tel})
+        </foreach>
+        on duplicate key update
+username = values(username) password = values(password) name = values(name) tel = values(tel)     </insert>
+
+    <select id="getUserGroupList" resultType="com.mavis.mypanel.entity.vo.UserGroupVo">
+        SELECT u.*,GROUP_CONCAT(ug.name) as groups from t_system_user u
+        left join t_system_user_group_bind ugb on ugb.user_id = u.id
+        left join t_system_user_group ug on ug.id = ugb.group_id
+        where 1=1
+        <if test="username != null and username != ''">
+            and u.username like '%${username}%'
+        </if>
+        <if test="name != null and name != ''">
+            and u.name like '%${name}%'
+        </if>
+        GROUP BY u.id
+    </select>
+</mapper>
+

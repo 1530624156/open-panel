@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <script src="../static/js/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/index.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/My.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        .server-tag{
+            margin-left: 2px;
+        }
+    </style>
+</head>
+<body>
+<div id="app" v-loading="test_loading">
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-breadcrumb separator="/">
+                <el-breadcrumb-item v-for="o in menu_path">{{o}}</el-breadcrumb-item>
+            </el-breadcrumb>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="6" :offset="1">
+            <el-input placeholder="IP" v-model="input_search_ip" size="small" @change="" @keyup.enter.native="getServerList">
+                <template slot="prepend">IP</template>
+            </el-input>
+        </el-col>
+        <el-col :span="6">
+            <el-input placeholder="名称" v-model="input_search_name" size="small" @change="" @keyup.enter.native="getServerList">
+                <template slot="prepend">名称</template>
+            </el-input>
+        </el-col>
+        <el-col :span="2" :offset="4">
+            <el-button style="width: 100%;" type="warning" size="small" @click="startMonitor">刷新</el-button>
+        </el-col>
+        <el-col :span="2">
+            <el-button style="width: 100%;" type="primary" size="small" @click="getServerList">搜索</el-button>
+        </el-col>
+        <el-col :span="2">
+            <el-button style="width: 100%;" type="success" size="small" @click="dialog_add = true">添加</el-button>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-table :data="list"  border stripe size="small" >
+                <el-table-column width="50"  label="序号" type="index"></el-table-column>
+                <el-table-column label="IP" prop="ip"></el-table-column>
+                <el-table-column width="70" label="端口" prop="port"></el-table-column>
+                <el-table-column label="名称" prop="name"></el-table-column>
+                <el-table-column width="50" label="核数" prop="cpu"></el-table-column>
+                <el-table-column label="CPU使用率">
+                    <template slot-scope="scope">
+                        <el-progress v-if="calcUsedCpu(scope.row) > 90" type="circle" :width="60" :stroke-width="6" :percentage="calcUsedCpu(scope.row)" color="#F56C6C"></el-progress>
+                        <el-progress v-else-if="calcUsedCpu(scope.row) > 60" type="circle" :width="60" :stroke-width="6" :percentage="calcUsedCpu(scope.row)" color="#E6A23C"></el-progress>
+                        <el-progress v-else type="circle" :width="60" :stroke-width="6" :percentage="calcUsedCpu(scope.row)" color="#67C23A"></el-progress>
+                    </template>
+                </el-table-column>
+                <el-table-column width="70" label="内存">
+                    <template slot-scope="scope">
+                        {{(scope.row.ram / 1024 / 1024).toFixed(0)}}G
+                    </template>
+                </el-table-column>
+                <el-table-column width="70" label="已用内存">
+                    <template slot-scope="scope">
+                        {{calcUsedRam(scope.row)}}G
+                    </template>
+                </el-table-column>
+                <el-table-column label="内存百分比">
+                    <template slot-scope="scope">
+                        <el-progress v-if="calcUsedRamPercent(scope.row) > 90" type="circle" :width="60" :stroke-width="6" :percentage="calcUsedRamPercent(scope.row)" color="#F56C6C"></el-progress>
+                        <el-progress v-else-if="calcUsedRamPercent(scope.row) > 60" type="circle" :width="60" :stroke-width="6" :percentage="calcUsedRamPercent(scope.row)" color="#E6A23C"></el-progress>
+                        <el-progress v-else type="circle" :width="60" :stroke-width="6" :percentage="calcUsedRamPercent(scope.row)" color="#67C23A"></el-progress>
+                    </template>
+                </el-table-column>
+                <el-table-column label="标签" prop="tags">
+                    <template slot-scope="scope">
+                        <el-tag class="server-tag" v-if="scope.row.tags != ''" v-for="o in scope.row.tags.split(',')" size="mini" :key="o">{{o}}</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column label="备注" prop="remark"></el-table-column>
+                <el-table-column width="300" label="操作">
+                    <template slot-scope="scope">
+                        <el-row>
+                            <el-button type="success" size="mini" @click="openTerminal(scope.row)">终端</el-button>
+                            <el-button type="primary" size="mini" @click="editServer(scope.row)">编辑</el-button>
+                            <el-button type="danger" size="mini" @click="deleteServer(scope.row)">删除</el-button>
+                        </el-row>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-col>
+    </el-row>
+
+
+
+
+
+
+
+
+    <!--    添加节点 开始-->
+    <el-dialog
+            title="添加主机"
+            :visible.sync="dialog_add"
+            width="50%"
+            @close="">
+        <el-row :gutter="0">
+            <el-col :span="22" :offset="1">
+                <el-col :span="14">
+                    <el-input v-model="input_ip" placeholder="" size="small">
+                        <template slot="prepend">IP</template>
+                    </el-input>
+                </el-col>
+                <el-col :span="9" :offset="1">
+                    <el-input v-model="input_port" placeholder="" size="small">
+                        <template slot="prepend">端口</template>
+                    </el-input>
+                </el-col>
+            </el-col>
+
+            <el-col :span="22" :offset="1" class="t-20">
+                <el-select style="width: 100%;" v-model="select_user_template" value-key="" placeholder="账号模板" clearable filterable remote @change="" :remote-method="remoteMethod">
+                    <el-option value="0" label="请选择账号模板" disabled selected></el-option>
+                    <el-option v-for="item in list_user_template"
+                               :label="item.name"
+                               :value="item.id">
+                    </el-option>
+                </el-select>
+            </el-col>
+            <el-col :span="22" :offset="1">
+                <el-divider></el-divider>
+            </el-col>
+            <el-col :span="22" :offset="1">
+                <el-input v-model="input_name" placeholder="" size="small">
+                    <template slot="prepend">名称</template>
+                </el-input>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20">
+                <el-col :span="12">
+                    <el-input v-model="input_cpu" placeholder="" size="small">
+                        <template slot="prepend">CPU(核数)</template>
+                    </el-input>
+                </el-col>
+                <el-col :span="11" :offset="1">
+                    <el-input v-model="input_ram" placeholder="" size="small">
+                        <template slot="prepend">内存</template>
+                    </el-input>
+                </el-col>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20">
+                <el-input v-model="input_tags" placeholder="" size="small">
+                    <template slot="prepend">标签(逗号分隔)</template>
+                </el-input>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20">
+                <el-input v-model="input_remark" placeholder="" size="small">
+                    <template slot="prepend">备注</template>
+                </el-input>
+            </el-col>
+
+        </el-row>
+
+        <span slot="footer">
+            <el-button type="success" size="small" @click="testServerConn">测试连接</el-button>
+            <el-button type="primary" size="small" @click="saveServer">确 定</el-button>
+        </span>
+    </el-dialog>
+    <!--    添加节点 结束-->
+
+
+    <!--    编辑节点 开始-->
+    <el-dialog
+            title="编辑主机"
+            :visible.sync="dialog_edit"
+            width="50%"
+            v-loading="test_loading"
+            @close="">
+        <el-row :gutter="0">
+            <el-col :span="22" :offset="1">
+                <el-col :span="14">
+                    <el-input v-model="input_edit_ip" placeholder="" size="small">
+                        <template slot="prepend">IP</template>
+                    </el-input>
+                </el-col>
+                <el-col :span="9" :offset="1">
+                    <el-input v-model="input_edit_port" placeholder="" size="small">
+                        <template slot="prepend">端口</template>
+                    </el-input>
+                </el-col>
+            </el-col>
+
+            <el-col :span="22" :offset="1" class="t-20">
+                <el-select style="width: 100%;" v-model="select_user_template" value-key="" placeholder="账号模板" clearable filterable remote @change="" :remote-method="remoteMethod">
+                    <el-option value="0" label="请选择账号模板" disabled selected>请选择账号模板</el-option>
+                    <el-option v-for="item in list_user_template"
+                               :label="item.name"
+                               :value="item.id">
+                    </el-option>
+                </el-select>
+            </el-col>
+
+            <el-col :span="22" :offset="1">
+                <el-divider></el-divider>
+            </el-col>
+
+
+            <el-col :span="22" :offset="1" class="t-20">
+                <el-input v-model="input_edit_name" placeholder="" size="small">
+                    <template slot="prepend">名称</template>
+                </el-input>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20">
+                <el-col :span="12">
+                    <el-input v-model="input_edit_cpu" placeholder="" size="small">
+                        <template slot="prepend">CPU(核数)</template>
+                    </el-input>
+                </el-col>
+                <el-col :span="11" :offset="1">
+                    <el-input v-model="input_edit_ram" placeholder="" size="small">
+                        <template slot="prepend">内存</template>
+                    </el-input>
+                </el-col>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20">
+                <el-input v-model="input_edit_tags" placeholder="" size="small">
+                    <template slot="prepend">标签(逗号分隔)</template>
+                </el-input>
+            </el-col>
+            <el-col :span="22" :offset="1" class="t-20">
+                <el-input v-model="input_edit_remark" placeholder="" size="small">
+                    <template slot="prepend">备注</template>
+                </el-input>
+            </el-col>
+
+        </el-row>
+
+        <span slot="footer">
+            <el-button type="primary" size="small" @click="updateServer">保 存</el-button>
+        </span>
+    </el-dialog>
+    <!--    编辑节点 结束-->
+
+
+</div>
+
+<script>
+    var vue = new Vue({
+        el: '#app',
+        data:{
+            menu_path:parent.vue_data.menu_path,
+            input_search_ip:'',
+            input_search_name:'',
+            list:[],
+            dialog_add:false,
+            dialog_edit:false,
+            test_loading:false,
+            select_user_template:'0',
+            list_user_template:[],
+            map_server_info:{},
+
+            input_ip:'',
+            input_port:'',
+            input_name:'',
+            input_cpu:'',
+            input_ram:'',
+            input_tags:'',
+            input_remark:'',
+            input_username:'',
+            input_password:'',
+            input_conn_type:'',
+            input_pem_attachment_uuid:'',
+
+
+            input_edit_id:'',
+            input_edit_ip:'',
+            input_edit_port:'',
+            input_edit_name:'',
+            input_edit_cpu:'',
+            input_edit_ram:'',
+            input_edit_tags:'',
+            input_edit_remark:'',
+            input_edit_username:'',
+            input_edit_password:'',
+            input_edit_conn_type:''
+        },
+        methods:{
+            getServerList(){
+                vue.test_loading = true;
+                $.post('list',{
+                    ip:vue.input_search_ip,
+                    name:vue.input_search_name
+                },(data)=>{
+                    vue.test_loading = false;
+                    if(data.result == 1){
+                        vue.list = data.data;
+                    }
+                })
+            },
+            testServerConn(){
+                vue.test_loading = true;
+                $.post('testServerConn',{
+                    ip:vue.input_ip,
+                    port:vue.input_port,
+                    userTemplateId:vue.select_user_template
+                },(data)=>{
+                    vue.test_loading = false;
+                    if(data.result == 1){
+                        vue.input_cpu = data.data.cpu_num;
+                        vue.input_ram = data.data.ram_total;
+                        this.myMessage('success',data.msg);
+                    }else {
+                        this.myMessage('error',data.msg);
+                    }
+                })
+            },
+            saveServer(){
+                $.post('saveServer',{
+                    ip:vue.input_ip,
+                    port:vue.input_port,
+                    name:vue.input_name,
+                    cpu:vue.input_cpu,
+                    ram:vue.input_ram,
+                    tags:vue.input_tags,
+                    remark:vue.input_remark,
+                    userTemplateId:vue.select_user_template
+                },(data)=>{
+                    if(data.result == 1){
+                        this.myMessage('success',data.msg);
+                        vue.dialog_add = false;
+                        vue.getServerList();
+                    }else {
+                        this.myMessage('error',data.msg);
+                    }
+                })
+            },
+            updateServer(){
+                $.post('updateServer',{
+                    id:vue.input_edit_id,
+                    ip:vue.input_edit_ip,
+                    port:vue.input_edit_port,
+                    name:vue.input_edit_name,
+                    cpu:vue.input_edit_cpu,
+                    ram:vue.input_edit_ram,
+                    tags:vue.input_edit_tags,
+                    remark:vue.input_edit_remark,
+                    userTemplateId:vue.select_user_template
+                },(data)=>{
+                    if(data.result == 1){
+                        this.myMessage('success',data.msg);
+                        vue.dialog_add = false;
+                        vue.getServerList();
+                    }else {
+                        this.myMessage('error',data.msg);
+                    }
+                })
+            },
+            deleteServer(row){
+                this.myConfirm('删除节点','确定删除该节点吗？',()=>{
+                    $.post('./deleteServerById',{
+                        id:row.id
+                    },(data)=>{
+                        if(data.result == 1){
+                            vue.myMessage('success',data.msg);
+                            vue.getServerList();
+                        }else {
+                            vue.myMessage('error',data.msg);
+                        }
+                    })
+                },()=>{
+
+                })
+            },
+            editServer(row){
+                vue.dialog_edit = true;
+                vue.input_edit_id = row.id;
+                vue.input_edit_ip = row.ip;
+                vue.input_edit_port = row.port;
+                vue.input_edit_name = row.name;
+                vue.input_edit_cpu = row.cpu;
+                vue.input_edit_ram = row.ram;
+                vue.input_edit_tags = row.tags;
+                vue.input_edit_remark = row.remark;
+                vue.select_user_template = row.userTemplateId;
+            },
+            handleSuccess(res,file,filelist){
+                if(res.result == 1){
+                    vue.input_pem_attachment_uuid = res.data.uuid;
+                }
+            },
+            handleRemove(file, fileList) {
+                vue.input_pem_attachment_uuid = '';
+            },
+            loadUserTemplateList(name){
+                if(name == undefined || name == null){
+                    name = '';
+                }
+                $.post('getUserTemplateList',{
+                    name
+                },(data)=>{
+                    if(data.result == 1){
+                        vue.list_user_template = data.data;
+                    }
+                })
+            },
+            remoteMethod(name){
+                this.loadUserTemplateList(name);
+            },
+            loadServerInfo(){
+                $.post('getAllServerInfo',(data)=>{
+                    if(data.result == 1){
+                        vue.map_server_info = data.data;
+                    }
+                })
+            },
+            calcUsedRam(row){
+                if(vue.map_server_info != undefined && vue.map_server_info[row.id] != undefined){
+                    return (vue.map_server_info[row.id].ram_used / 1024/ 1024).toFixed(0);
+                }
+                return '';
+            },
+            calcUsedCpu(row){
+                if(vue.map_server_info != undefined && vue.map_server_info[row.id] != undefined){
+                    return parseFloat(vue.map_server_info[row.id].cpu_used);
+                }
+                return 0;
+            },
+            startMonitor(){
+                vue.test_loading = true;
+                $.post('regetAllServerInfo',(data)=>{
+                    vue.test_loading = false;
+                    if(data.result == 1){
+                        vue.map_server_info = data.data;
+                    }
+                })
+            },
+            calcUsedRamPercent(row){
+                if(vue.map_server_info != undefined && vue.map_server_info[row.id] != undefined){
+                    var percent = vue.map_server_info[row.id].ram_used / row.ram;
+                    return parseInt((percent*100).toFixed(0));
+                }
+                return 0;
+            },
+            // 在当前页面 打开终端页面，页面路径 ../terminal/index.html
+            openTerminal(row) {
+                var url = '../terminal/index.html?serverId=' + row.id;
+                //当前嵌入的页面打开
+                window.open(url,'_self');
+                // window.open(url);
+            },
+        }
+    });
+
+    elementUiNormalMethod(vue);
+    vue.getServerList();
+    vue.loadUserTemplateList();
+
+    // 主机状态监测2222
+    vue.loadServerInfo();
+    setInterval(()=>{
+        vue.loadServerInfo();
+    },5000);
+
+
+</script>
+</body>
+</html>

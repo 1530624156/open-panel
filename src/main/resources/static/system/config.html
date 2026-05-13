@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <script src="../static/js/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/index.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/My.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div id="app">
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-breadcrumb separator="/">
+                    <el-breadcrumb-item v-for="o in menu_path">{{o}}</el-breadcrumb-item>
+                </el-breadcrumb>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="8" :offset="1">
+                <el-input placeholder="" v-model="input_search_paramId" size="small" @change="" @keyup.enter.native="getParamValue">
+                    <template slot="prepend">配置Key</template>
+                </el-input>
+            </el-col>
+            <el-col :span="3" :offset="11">
+                <el-button style="width: 100%;" type="primary" size="small" @click="getParamValue">搜索</el-button>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-table :data="tableData" border striped style="width: 100%">
+                    <el-table-column prop="paramId" label="配置Key"></el-table-column>
+                    <el-table-column prop="paramValue" label="配置值"></el-table-column>
+                    <el-table-column prop="paramName" label="配置描述"></el-table-column>
+                    <el-table-column label="操作">
+                        <template slot-scope="scope">
+                            <el-button type="primary" size="mini" @click="editParam(scope.row)">编辑</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </el-col>
+        </el-row>
+
+
+
+
+        <el-dialog title="修改配置" :visible.sync="dialog_edit_config" width="70%">
+            <el-row :gutter="20">
+                <el-col :span="24" >
+                    <p>{{label_edit_config_name}}</p>
+                    <el-input class="t-20" v-model="input_edit_config" size="normal" type="textarea"></el-input>
+                </el-col>
+            </el-row>
+
+            <span slot="footer">
+            <el-button type="success" size="small" @click="saveParam()">保 存</el-button>
+            </span>
+        </el-dialog>
+
+    </div>
+
+<script>
+    var vue = new Vue({
+        el: '#app',
+        data:{
+            menu_path:parent.vue_data.menu_path,
+            input_search_paramId:'',
+            tableData:[],
+            dialog_edit_config:false,
+            label_edit_config_name:'',
+            input_edit_config:'',
+
+        },
+        methods:{
+            getParamValue(){
+                $.post('./getParamValue',{
+                    paramId:vue.input_search_paramId
+                },(data)=>{
+                    if(data.result == 1){
+                        vue.tableData = data.data;
+                    }
+                })
+            },
+            editParam(row){
+                console.log(row)
+                vue.dialog_edit_config = true;
+                vue.label_edit_config_name = row.paramId;
+                vue.input_edit_config = row.paramValue;
+            },
+            saveParam(){
+                $.post('./updateParamValue',{
+                    paramId:vue.label_edit_config_name,
+                    paramValue:vue.input_edit_config
+                },(data)=>{
+                    if(data.result == 1){
+                        this.myMessage('success','修改成功');
+                        vue.getParamValue();
+                    }else {
+                        this.myMessage('error','修改失败');
+                    }
+                })
+            }
+        }
+    });
+
+    elementUiNormalMethod(vue);
+    vue.getParamValue();
+</script>
+</body>
+</html>

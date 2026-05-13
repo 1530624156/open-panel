@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <script src="../static/js/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/index.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/My.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        body{
+            width: calc(100% - 20px);
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <el-row :gutter="20">
+            <el-col :span="8" :offset="1">
+                <el-input v-model="input_tagname" placeholder="" size="normal" @change="" @keyup.native="searchTag">
+                    <template slot="prepend">
+                        版本号
+                    </template>
+                </el-input>
+                
+            </el-col>
+        </el-row>
+        
+        <el-row :gutter="20" class="t-20">
+            <el-col :span="22" :offset="1">
+                <el-table :data="table_tags" border stripe height="480" v-loading="loading_table">
+                    <el-table-column prop="mirrorname" label="镜像名" width="200"></el-table-column>
+                    <el-table-column label="版本号">
+                        <template slot-scope="scope">
+                            <el-tag size="mini">{{scope.row.tag}}</el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="digest" label="digest"></el-table-column>
+                    <el-table-column label="操作" width="100">
+                        <template slot-scope="scope">
+                            <el-button type="danger" size="small" @click="delTag(scope.row)">删除</el-button>
+                        </template>
+                    </el-table-column>
+                    
+                </el-table>
+                
+            </el-col>
+        </el-row>
+        
+    </div>
+
+    <script>
+        var vue_app = new Vue({
+            el:'#app',
+            data:{
+                mirror:decodeURIComponent(getParam('mirror')),
+                regId:getParam('regId'),
+                table_tags:[],
+                table_tags_bak:[],
+                input_tagname:'',
+                loading_table:false
+            },
+            methods: {
+                // type[success,warning,info,error]
+                myMessage(type,message,duration){
+                    if(duration==undefined || duration==null){duration = 1500;}
+                    this.$message({type,message,duration});
+                },
+                myConfirm(title,content,yesCb,noCb){
+                    this.$confirm(content, title, {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        callback: (e)=>{
+                            switch(e){
+                                case 'confirm':yesCb();break;
+                                case 'cancel':noCb();break;
+                            }
+                        }
+                    });
+                },
+                getTagsByMirror:function (regId,mirror) {
+                    this.loading_table = true;
+                    $.post('getTagsByRegIdMirror',{
+                        regId,
+                        mirror
+                    },(data)=>{
+                        this.loading_table = false;
+                        this.table_tags = data.data;
+                        this.table_tags_bak = data.data;
+                    })
+                },
+                searchTag:function(){
+                    if(this.input_tagname == '' || this.input_tagname == undefined){
+                        this.table_tags = this.table_tags_bak;
+                    }else{
+                        var arr = [];
+                        for(var o of this.table_tags_bak){
+                            if(o.tag.indexOf(this.input_tagname) > -1){
+                                arr.push(o);
+                            }
+                        }
+                        this.table_tags = arr;
+                    }
+                },
+                delTag:function(row){
+                    this.myConfirm('删除','确定删除该版本吗？',()=>{
+                        $.post('deleteMirrorTagsByDigest',{
+                            digest:row.digest,
+                            mirrorname:row.mirrorname,
+                            regId:vue_app.regId
+                        },(data)=>{
+                            if(data.result == 1){
+                                this.getTagsByMirror(vue_app.regId,vue_app.mirror);
+                                vue_app.myMessage('success','删除成功');
+                                parent.getMirrorList();
+                            }else {
+                                vue_app.myMessage('error','删除失败');
+                            }
+                        })
+                    },()=>{});
+                }
+            }
+        })
+
+        $(()=>{
+            vue_app.getTagsByMirror(vue_app.regId,vue_app.mirror);
+        })
+    </script>
+</body>
+</html>

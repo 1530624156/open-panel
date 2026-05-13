@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <script src="../static/js/My.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/index.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/jquery-1.11.3.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../static/js/echarts.min.js"></script>
+    <script src="./nginx.js" type="text/javascript" charset="utf-8"></script>
+<!--    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/codemirror.css">-->
+<!--    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/codemirror.min.js" charset="utf-8"></script>-->
+<!--    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/javascript/javascript.js" charset="utf-8"></script>-->
+
+    <style>
+        .el-tag:hover{
+            cursor: pointer;
+        }
+        ul.card li{
+            list-style: none;
+            margin-top: 2px;
+            font-size: 0.8em;
+        }
+        .monitorCanvas{
+            width: 100%;
+            height: 100px;
+            margin: 0 auto 0 auto;
+        }
+        .netSpeedCanvas{
+            width: 100%;
+            height: 120px;
+            margin: 0 auto 0 auto;
+        }
+
+        .card_monitor .el-card__body{
+            height: 150px;
+        }
+        div.canvasTip{
+            display: block;
+            width: 100%;
+            font-size: 0.8em;
+            text-align: center;
+            margin-top: -15px;
+        }
+        .card-title{
+            font-weight: bold;
+        }
+        em.speed{
+            font-style: normal;
+            color: #409EFF;
+            font-size: 0.7em;
+            float: right;
+            margin-right: 5px;
+        }
+        table{
+            font-size: 0.9em;
+        }
+        tr,
+        th,
+        td{
+            padding: 2px !important;
+        }
+        .card-status::-webkit-scrollbar{
+            width: 5px;
+        }
+        .card-status{
+            /*height: 450px;*/
+            /*resize: both;*/
+            /*overflow-y: scroll;*/
+        }
+        .title_button{
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-breadcrumb separator="/">
+                <el-breadcrumb-item v-for="o in menu_path">{{o}}</el-breadcrumb-item>
+            </el-breadcrumb>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="7" :offset="1">
+            <el-select v-model="input_nginx_node" placeholder="请输入要搜索的节点名称" clearable style="width: 100%;" @change="onNodeChanged" size="small">
+                <el-option v-for="item in nginxNodes" :key="item.id" :label="item.name" :value="JSON.stringify(item)"></el-option>
+            </el-select>
+        </el-col>
+        <el-col :span="2" :offset="7">
+            <el-button type="success" size="small" class="title_button" @click="startNginx()">启动</el-button>
+        </el-col>
+        <el-col :span="2">
+            <el-button type="warning" size="small" class="title_button" @click="testNginx()">测试</el-button>
+        </el-col>
+        <el-col :span="2">
+            <el-button type="primary" size="small" class="title_button" @click="reloadNginx()">重载</el-button>
+        </el-col>
+        <el-col :span="2">
+            <el-button type="danger" size="small" class="title_button" @click="stopNginx()">停止</el-button>
+        </el-col>
+    </el-row>
+<!--    第一栏卡片-->
+    <el-row :gutter="20" class="t-20 card_monitor" v-loading="loading">
+        <el-col :span="7" :offset="1">
+            <el-card class="box-card">
+              <div slot="header" class="clearfix">
+                <span class="card-title">服务器信息</span>
+              </div>
+              <div class="text item">
+                  <ul class="card">
+                      <li><b>系统类型：</b>{{monitorInfo.family}}</li>
+                      <li><b>系统版本：</b>{{monitorInfo.version}}</li>
+                      <li><b>主机型号：</b>{{monitorInfo.serverStr}}</li>
+                      <li><b>CPU：</b>{{monitorInfo.cpuStr}}</li>
+                  </ul>
+              </div>
+            </el-card>
+        </el-col>
+        <el-col :span="8">
+            <el-card class="box-card">
+              <div slot="header" class="clearfix">
+                <span class="card-title">性能监测</span>
+              </div>
+              <div class="text item">
+                  <el-col :span="8" style="text-align: center">
+                    <div id="cpuCanvas" class="monitorCanvas"></div>
+                    <div class="canvasTip">CPU</div>
+                  </el-col>
+                  <el-col :span="8" style="text-align: center">
+                    <div id="memCanvas" class="monitorCanvas"></div>
+                    <div class="canvasTip">内存</div>
+                  </el-col>
+                  <el-col :span="8" style="text-align: center">
+                    <div id="diskCanvas" class="monitorCanvas"></div>
+                    <div class="canvasTip">硬盘</div>
+                  </el-col>
+              </div>
+            </el-card>
+        </el-col>
+        <el-col :span="7">
+            <el-card class="box-card">
+              <div slot="header" class="clearfix">
+                <span class="card-title">流量情况
+                <em class="speed">
+                    上行:
+                    <span class="speed-value">{{netSpeedInfo.netSpeedUp[netSpeedInfo.netSpeedUp.length-1]}}</span>
+                    <span class="speed-unit">KB/s</span>
+                    <br>
+                    下行:
+                    <span class="speed-value">{{netSpeedInfo.netSpeedDown[netSpeedInfo.netSpeedDown.length-1]}}</span>
+                    <span class="speed-unit">KB/s</span>
+                </em>
+                </span>
+              </div>
+              <div class="text item">
+                  <el-col :span="24" style="text-align: center">
+                      <div id="netSpeedCanvas" class="netSpeedCanvas"></div>
+                  </el-col>
+              </div>
+            </el-card>
+        </el-col>
+    </el-row>
+<!--    第二栏卡片-->
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-card class="box-card card-status" v-loading="loading">
+                <div slot="header" class="clearfix">
+                    <span><b>节点健康状态</b></span>
+                </div>
+                <div class="text item">
+                    <el-table :data="table_check_status" border striped style="width: 100%">
+                        <el-table-column type="index" label="序号"></el-table-column>
+                        <el-table-column prop="Upstream" label="Upstream"></el-table-column>
+                        <el-table-column prop="Name" label="Name"></el-table-column>
+                        <el-table-column label="Status" width="120">
+                            <template slot-scope="scope">
+                                <span v-if="scope.row.Status==='up'" style="color: #67C23A">{{scope.row.Status}}</span>
+                                <span v-else-if="scope.row.Status==='down'" style="color: #F56C6C">{{scope.row.Status}}</span>
+                                <span v-else>{{scope.row.Status}}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="Rise_counts" label="Rise_counts"></el-table-column>
+                        <el-table-column prop="Fall_counts" label="Fall_counts"></el-table-column>
+                    </el-table>
+                </div>
+            </el-card>
+        </el-col>
+    </el-row>
+
+<!--    进程列表-->
+    <el-row :gutter="20" class="t-20">
+        <el-col :span="22" :offset="1">
+            <el-card class="box-card " v-loading="loading">
+                <div slot="header" class="clearfix">
+                    <span><b>进程信息</b></span>
+                </div>
+                <div class="text item">
+                    <el-table :data="table_nginx_process" border striped style="width: 100%">
+                        <el-table-column type="index" label="序号"></el-table-column>
+                        <el-table-column label="进程信息">
+                            <template slot-scope="scope">
+                                {{scope.row}}
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+            </el-card>
+        </el-col>
+    </el-row>
+
+</div>
+
+<script>
+    var vue = new Vue({
+        el: '#app',
+        data: {
+            menu_path: parent.vue_data.menu_path,
+            nginxNodes:[],
+            input_nginx_node:'',
+            loading:false,
+            monitorInfo:{},
+            netSpeedInfo:{
+                timeLine:[],
+                netSpeedUp:[],//上行
+                netSpeedDown:[]//下行
+            },
+            table_check_status:[],
+            table_nginx_process:[]
+        },
+        methods:{
+            getNginxNodes(){
+                $.post('./getNginxNode',{
+                    name:vue.input_search_id,
+                    status:1
+                },(data)=>{
+                    console.log(data)
+                    if(data.result == 1){
+                        vue.nginxNodes = data.data
+                    }
+                })
+            },
+            getNginxNodeMornitor(first){
+                if(first){
+                    vue.loading = true;
+                }
+                if(vue.input_nginx_node != null && vue.input_nginx_node != ''){
+                    var node = JSON.parse(vue.input_nginx_node);
+
+                    $.post('./getNginxNodeMornitor',node,(data)=>{
+                        if(data.result == 1){
+                            vue.monitorInfo = data.data;
+                            // 绘制性能监测
+                            drawPie('cpuCanvas',
+                                'CPU',
+                                data.data.cpuUsed,
+                                100,
+                                (data.data.cpuUsed).toFixed(1)+'%',
+                                '#FD7895','rgba(0,0,0,0.1)');
+
+
+                            drawPie('memCanvas',
+                                data.data.memTotal.toFixed(0)+'G',
+                                data.data.memUsed,
+                                data.data.memTotal,
+                                data.data.memUsed.toFixed(0)+'G',
+                                '#52AFEC','rgba(0,0,0,0.1)');
+
+
+                            var disk_used = data.data.diskTotal - data.data.diskFree;
+                            drawPie('diskCanvas',
+                                (data.data.diskTotal).toFixed(0) +'G',
+                                disk_used,
+                                data.data.diskTotal,
+                                disk_used+'G',
+                                '#97D57D','rgba(0,0,0,0.1)');
+
+                            // 绘制网速
+                            this.netSpeedInfo.timeLine.push(new Date().Format('HH:mm:ss'));
+                            this.netSpeedInfo.netSpeedUp.push((data.data.nowUpSpeed/1024).toFixed(1));
+                            this.netSpeedInfo.netSpeedDown.push((data.data.nowDownSpeed/1024).toFixed(1));
+                            if(this.netSpeedInfo.timeLine.length > 20){
+                                this.netSpeedInfo.timeLine.shift();
+                                this.netSpeedInfo.netSpeedUp.shift();
+                                this.netSpeedInfo.netSpeedDown.shift();
+                            }
+                            drawLine('netSpeedCanvas',this.netSpeedInfo.netSpeedUp,this.netSpeedInfo.netSpeedDown,this.netSpeedInfo.timeLine);
+                        }else {
+                            this.myMessage('error',data.msg);
+                        }
+
+                        vue.loading = false;
+                    })
+                }
+            },
+            getNginxCheckStatus(){
+                if(vue.input_nginx_node != null && vue.input_nginx_node != ''){
+                    var node = JSON.parse(vue.input_nginx_node);
+                    $.post('./getNginxCheckStatus',node,(data)=>{
+                        if(data.result == 1){
+                            vue.table_check_status = data.data;
+                        }else {
+                            vue.table_check_status = [];
+                        }
+                    })
+                }
+            },
+            highLightConfig(){
+                var configs = document.getElementsByClassName('textarea_config');
+                console.log(configs)
+                for(var i=0;i<configs.length;i++){
+                    CodeMirror.fromTextArea(configs[i], {
+                        lineNumbers: true,     // 显示行数
+                        viewportMargin: Infinity,//显示所有行
+                        height: "500px",
+                        indentUnit: 4,         // 缩进单位为4
+                        styleActiveLine: true, // 当前行背景高亮
+                        matchBrackets: true,   // 括号匹配
+                        mode: "javascript",    // 设置编辑器语言为JavaScript
+                        lineWrapping: true,    // 自动换行
+                        theme: 'default'      // 使用default模版
+                    })
+                }
+            },
+            getProcessInfo(){
+                if(vue.input_nginx_node != null && vue.input_nginx_node != ''){
+                    var node = JSON.parse(vue.input_nginx_node);
+                    $.post('./getNginxProcess',node,(data)=>{
+                        if(data.result == 1){
+                            vue.table_nginx_process = data.data;
+                        }
+                    })
+                }
+            },
+            startNginx(){
+                this.myConfirm('确认','确定启动Nginx吗',()=>{
+                    if(vue.input_nginx_node != null && vue.input_nginx_node != ''){
+                        var node = JSON.parse(vue.input_nginx_node);
+                        $.post('./nginxAction',{
+                            apiUrl:node.apiUrl,
+                            action:'start'
+                        },(data)=>{
+                            if(data.result == 1){
+                                this.myMessage('success',data.msg);
+                                this.getNginxNodeMornitor(true);
+                                this.getProcessInfo();
+                            }else {
+                                this.myMessage('error',data.msg);
+                            }
+                        })
+                    }
+                },()=>{})
+            },
+            stopNginx(){
+                this.myConfirm('确认','确定要停止Nginx吗？',()=>{
+                    if(vue.input_nginx_node != null && vue.input_nginx_node != ''){
+                        var node = JSON.parse(vue.input_nginx_node);
+                        $.post('./nginxAction',{
+                            apiUrl:node.apiUrl,
+                            action:'stop'
+                        },(data)=>{
+                            if(data.result == 1){
+                                this.myMessage('success',data.msg);
+                                this.getNginxNodeMornitor(true);
+                                this.getProcessInfo();
+                            }else {
+                                this.myMessage('error',data.msg);
+                            }
+                        })
+                    }
+                },()=>{})
+            },
+            testNginx(){
+                if(vue.input_nginx_node != null && vue.input_nginx_node != ''){
+                    var node = JSON.parse(vue.input_nginx_node);
+                    $.post('./nginxAction',{
+                        apiUrl:node.apiUrl,
+                        action:'test'
+                    },(data)=>{
+                        if(data.result == 1){
+                            this.myMessage('success',data.msg);
+                        }else {
+                            this.myMessage('error',data.msg);
+                        }
+                    })
+                }
+            },
+            reloadNginx(){
+                if(vue.input_nginx_node != null && vue.input_nginx_node != ''){
+                    var node = JSON.parse(vue.input_nginx_node);
+                    $.post('./nginxAction',{
+                        apiUrl:node.apiUrl,
+                        action:'reload'
+                    },(data)=>{
+                        if(data.result == 1){
+                            this.myMessage('success',data.msg);
+                        }else {
+                            this.myMessage('error',data.msg);
+                        }
+                    })
+                }
+            },
+            // 当节点更换的时候
+            onNodeChanged(){
+                this.getNginxNodeMornitor(true);
+                this.getNginxCheckStatus();
+                this.getProcessInfo();
+                this.netSpeedInfo.timeLine = [];
+                this.netSpeedInfo.netSpeedUp = [];
+                this.netSpeedInfo.netSpeedDown = [];
+            }
+        }
+    })
+
+    var interval_info = setInterval(()=>{
+        vue.getNginxNodeMornitor(false);
+    },5000);
+
+    var interval_status = setInterval(()=>{
+        vue.getNginxCheckStatus();
+    },5000);
+
+    elementUiNormalMethod(vue);
+    vue.getNginxNodes();
+</script>
+</body>
+</html>

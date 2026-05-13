@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mavis.mypanel.dao.TSystemAttachmentDao">
+
+    <resultMap type="com.mavis.mypanel.entity.TSystemAttachment" id="TSystemAttachmentMap">
+        <result property="id" column="id" jdbcType="INTEGER"/>
+        <result property="size" column="size" jdbcType="INTEGER"/>
+        <result property="filename" column="filename" jdbcType="VARCHAR"/>
+        <result property="uuid" column="uuid" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <!-- 批量插入 -->
+    <insert id="insertBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_system_attachment(sizefilenameuuid)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+        (#{entity.size}#{entity.filename}#{entity.uuid})
+        </foreach>
+    </insert>
+    <!-- 批量插入或按主键更新 -->
+    <insert id="insertOrUpdateBatch" keyProperty="id" useGeneratedKeys="true">
+        insert into main.t_system_attachment(sizefilenameuuid)
+        values
+        <foreach collection="entities" item="entity" separator=",">
+            (#{entity.size}#{entity.filename}#{entity.uuid})
+        </foreach>
+        on duplicate key update
+size = values(size) filename = values(filename) uuid = values(uuid)     </insert>
+
+</mapper>
+
