@@ -182,6 +182,25 @@ public class ServerLogic {
     public JsonReturn loginSsh(Integer serverId) {
         // 获取主机基本信息 Ip port 账号模板等
         TServer server = tServerService.getById(serverId);
+        String serverKey = server.getIp() + ":" + server.getPort();
+
+        // 检查是否已有可复用的连接
+        SSHConnectInfo existingInfo = TTerminalService.webSshMap.get(serverKey);
+        if (existingInfo != null && existingInfo.getSession() != null && existingInfo.getSession().isConnected()) {
+            // 复用已有连接
+            String tagId = IdUtil.simpleUUID();
+            TTerminalService.webLoginMap.put(tagId, server);
+            existingInfo.setTagId(tagId);
+
+            TServerVO tServerVO = new TServerVO();
+            tServerVO.setIp(server.getIp());
+            tServerVO.setPort(server.getPort());
+            tServerVO.setName(server.getName());
+            tServerVO.setTagId(tagId);
+            tServerVO.setReused(true);
+            return JsonReturn.success("复用已有连接", tServerVO);
+        }
+
         try {
             Session session  = getSshSessionByServer(server);
             String tagId = IdUtil.simpleUUID();
@@ -189,13 +208,15 @@ public class ServerLogic {
             // 会话共用技术
             SSHConnectInfo sshConnectInfo = new SSHConnectInfo();
             sshConnectInfo.setSession(session);
-            TTerminalService.webSshMap.put(server.getIp() + ":" + server.getPort(), sshConnectInfo);
+            sshConnectInfo.setTagId(tagId);
+            TTerminalService.webSshMap.put(serverKey, sshConnectInfo);
             // 返回 tagId 和 server 信息
             TServerVO tServerVO = new TServerVO();
             tServerVO.setIp(server.getIp());
             tServerVO.setPort(server.getPort());
             tServerVO.setName(server.getName());
             tServerVO.setTagId(tagId);
+            tServerVO.setReused(false);
             return JsonReturn.success("登录成功", tServerVO);
         } catch (Exception e) {
             e.printStackTrace();

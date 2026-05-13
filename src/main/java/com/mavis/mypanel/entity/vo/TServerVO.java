@@ -17,4 +17,6 @@ public class TServerVO extends TService {
     private String name;
 
     private String tagId;
+
+    private boolean reused;
 }

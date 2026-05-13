@@ -389,7 +389,7 @@
                 return decrypted.toString(CryptoJS.enc.Utf8);
             };
 
-            const initTerm = (tab) => {
+            const initTerm = (tab, reused = false) => {
                 const fitAddon = new window.FitAddon.FitAddon();
                 tab.fitAddon = fitAddon;
 
@@ -406,7 +406,11 @@
                 });
                 term.open(tab.container);
                 term.loadAddon(fitAddon);
-                term.write(`🔌 正在连接 ${tab.name}...\r\n`);
+                if (reused) {
+                    term.write(`🔌 检测到已有连接，正在复用...\r\n`);
+                } else {
+                    term.write(`🔌 正在连接 ${tab.name}...\r\n`);
+                }
                 tab.term = term;
 
                 // 使用 ResizeObserver 确保容器尺寸正确后再 fit
@@ -434,7 +438,11 @@
                         operate: 'connect',
                         tagId: tab.id
                     })));
-                    tab.term.write('✅ 连接成功\r\n');
+                    if (tab.reused) {
+                        tab.term.write('✅ 此主机已有连接，直接复用\r\n');
+                    } else {
+                        tab.term.write('✅ 连接成功\r\n');
+                    }
                     // 连接成功后再发 resize，使用 tab 自己的 term
                     setTimeout(() => {
                         doResize(tab);
@@ -517,6 +525,7 @@
                 const tab = {
                     id: res.tagId,
                     name: res.name,
+                    reused: res.reused,
                     container: null,
                     term: null,
                     socket: null,
@@ -533,7 +542,7 @@
                 activeTab.value = tab.id;
 
                 await nextTick();
-                initTerm(tab);
+                initTerm(tab, res.reused);
                 initWebSocket(tab);
             };
 
