@@ -17,7 +17,8 @@ public enum PermissionEnum {
     SYSTEM_JENKINS("system:jenkins","Jenkins管理"),
     SYSTEM_SERVER("server:server","主机管理"),
     SYSTEM_REGISTRY("server:registry","仓库管理"),
-    SYSTEM_SERVICE("system:service","服务管理");
+    SYSTEM_SERVICE("system:service","服务管理"),
+    SYSTEM_LOG("system:log","日志管理");
 
 
     @Getter

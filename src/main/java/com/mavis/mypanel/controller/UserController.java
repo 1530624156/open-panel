@@ -2,6 +2,7 @@ package com.mavis.mypanel.controller;
 
 import com.mavis.mypanel.entity.TSystemUser;
 import com.mavis.mypanel.entity.TSystemUserGroup;
+import com.mavis.mypanel.entity.anno.OperationLog;
 import com.mavis.mypanel.entity.anno.Permission;
 import com.mavis.mypanel.entity.enums.PermissionEnum;
 import com.mavis.mypanel.entity.vo.JsonReturn;
@@ -46,18 +47,21 @@ public class UserController {
     }
 
 
+    @OperationLog("添加用户")
     @RequestMapping("addUser")
     @Permission(permission = PermissionEnum.SYSTEM_USER)
     public JsonReturn addUser(TSystemUser user) {
         return userLogic.addUser(user);
     }
 
+    @OperationLog("删除用户")
     @RequestMapping("deleteById")
     @Permission(permission = PermissionEnum.SYSTEM_USER)
     public JsonReturn deleteById(Integer id) {
         return userLogic.deleteById(id);
     }
 
+    @OperationLog("编辑用户")
     @RequestMapping("editUser")
     @Permission(permission = PermissionEnum.SYSTEM_USER)
     public JsonReturn editUser(TSystemUser user) {
@@ -70,6 +74,7 @@ public class UserController {
      * @param userGroup
      * @return
      */
+    @OperationLog("添加用户组")
     @RequestMapping("addUserGroup")
     @Permission(permission = PermissionEnum.SYSTEM_USER)
     public JsonReturn addUserGroup(TSystemUserGroup userGroup) {
@@ -107,6 +112,7 @@ public class UserController {
      * 添加用户到用户组
      * @param userIds userid逗号分隔
      */
+    @OperationLog("添加用户到用户组")
     @RequestMapping("addUser2Group")
     @Permission(permission = PermissionEnum.SYSTEM_USER)
     public JsonReturn addUser2Group(String userIds, Integer groupId) {
@@ -116,12 +122,14 @@ public class UserController {
     /**
      * 移除用户
      */
+    @OperationLog("移除用户组用户")
     @RequestMapping("removeUserFromGroup")
     @Permission(permission = PermissionEnum.SYSTEM_USER)
     public JsonReturn removeUserFromGroup(Integer userId, Integer groupId) {
         return userLogic.removeUserFromGroup(userId, groupId);
     }
 
+    @OperationLog("删除用户组")
     @RequestMapping("deleteUserGroup")
     @Permission(permission = PermissionEnum.SYSTEM_USER)
     public JsonReturn deleteUserGroup(Integer id) {
