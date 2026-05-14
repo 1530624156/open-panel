@@ -5,168 +5,161 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>欢迎 - OPEN-Panel</title>
     <style>
-        :root {
-            --bg-primary: #0d1117;
-            --bg-secondary: #161b22;
-            --bg-card: #1c2128;
-            --border-color: #30363d;
-            --text-primary: #e6edf3;
-            --text-secondary: #8b949e;
-            --accent-blue: #58a6ff;
-            --accent-green: #3fb950;
-            --accent-purple: #a371f7;
-            --accent-orange: #d29922;
-            --accent-cyan: #39c5cf;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #f5f7fa;
+            color: #1d2129;
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
         }
 
         .welcome-header {
-            padding: 24px 32px;
-            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
-            border-bottom: 1px solid var(--border-color);
+            background: #fff;
+            border-bottom: 1px solid #e5e6eb;
+            padding: 28px 36px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
-        .welcome-header h1 {
-            font-size: 28px;
+        .welcome-header-left h1 {
+            font-size: 22px;
             font-weight: 600;
-            margin-bottom: 8px;
-            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #1d2129;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
-        .welcome-header p {
-            color: var(--text-secondary);
-            font-size: 15px;
+        .version-tag {
+            display: inline-flex;
+            align-items: center;
+            background: #e8f3ff;
+            color: #165dff;
+            font-size: 12px;
+            font-weight: 500;
+            padding: 2px 10px;
+            border-radius: 10px;
+            letter-spacing: 0.3px;
+        }
+
+        .welcome-header-left p {
+            color: #86909c;
+            font-size: 14px;
+            margin-top: 6px;
+        }
+
+        .welcome-header-right {
+            text-align: right;
+            color: #86909c;
+            font-size: 13px;
+            line-height: 1.8;
         }
 
         .welcome-content {
-            flex: 1;
-            padding: 32px;
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
-            width: 100%;
+            padding: 28px 36px;
         }
 
-        .stats-grid {
+        /* Stats */
+        .stats-row {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: 16px;
-            margin-bottom: 32px;
+            margin-bottom: 28px;
         }
 
         .stat-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
+            background: #fff;
+            border: 1px solid #e5e6eb;
             border-radius: 8px;
-            padding: 20px;
+            padding: 20px 24px;
             display: flex;
             align-items: center;
             gap: 16px;
-            transition: all 0.2s ease;
+            transition: box-shadow 0.2s, border-color 0.2s;
         }
 
         .stat-card:hover {
-            border-color: var(--accent-blue);
-            transform: translateY(-2px);
+            border-color: #c9cdd4;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         }
 
         .stat-icon {
-            width: 48px;
-            height: 48px;
+            width: 44px;
+            height: 44px;
             border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 20px;
+            flex-shrink: 0;
         }
 
-        .stat-icon.blue { background: rgba(88, 166, 255, 0.15); color: var(--accent-blue); }
-        .stat-icon.green { background: rgba(63, 185, 80, 0.15); color: var(--accent-green); }
-        .stat-icon.purple { background: rgba(163, 113, 247, 0.15); color: var(--accent-purple); }
-        .stat-icon.orange { background: rgba(210, 153, 34, 0.15); color: var(--accent-orange); }
+        .stat-icon.server { background: #e8f3ff; }
+        .stat-icon.service { background: #e8ffea; }
+        .stat-icon.docker { background: #f0e8ff; }
+        .stat-icon.jenkins { background: #fff3e8; }
 
-        .stat-info h3 {
-            font-size: 24px;
+        .stat-value {
+            font-size: 26px;
             font-weight: 600;
-            margin-bottom: 4px;
+            color: #1d2129;
+            line-height: 1.2;
         }
 
-        .stat-info p {
+        .stat-label {
             font-size: 13px;
-            color: var(--text-secondary);
+            color: #86909c;
+            margin-top: 2px;
+        }
+
+        /* Sections */
+        .section {
+            margin-bottom: 28px;
         }
 
         .section-title {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            color: #1d2129;
+            margin-bottom: 14px;
+            padding-left: 10px;
+            border-left: 3px solid #165dff;
         }
 
-        .section-title::before {
-            content: '';
-            width: 4px;
-            height: 18px;
-            background: var(--accent-blue);
-            border-radius: 2px;
-        }
-
-        .quick-actions {
+        /* Quick Actions */
+        .actions-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: 16px;
-            margin-bottom: 32px;
         }
 
         .action-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
+            background: #fff;
+            border: 1px solid #e5e6eb;
             border-radius: 8px;
             padding: 20px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
             text-decoration: none;
             color: inherit;
-            display: block;
-        }
-
-        .action-card:hover {
-            border-color: var(--accent-blue);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
-
-        .action-card h4 {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 8px;
             display: flex;
-            align-items: center;
+            flex-direction: column;
             gap: 10px;
         }
 
-        .action-card p {
-            font-size: 13px;
-            color: var(--text-secondary);
-            line-height: 1.5;
+        .action-card:hover {
+            border-color: #165dff;
+            box-shadow: 0 2px 8px rgba(22,93,255,0.1);
+        }
+
+        .action-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .action-icon {
@@ -176,186 +169,218 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            font-size: 16px;
+            flex-shrink: 0;
         }
 
+        .action-icon.server { background: #e8f3ff; }
+        .action-icon.service { background: #e8ffea; }
+        .action-icon.jenkins { background: #f0e8ff; }
+        .action-icon.nginx { background: #fff3e8; }
+
+        .action-card-header span {
+            font-size: 15px;
+            font-weight: 500;
+            color: #1d2129;
+        }
+
+        .action-card p {
+            font-size: 13px;
+            color: #86909c;
+            line-height: 1.6;
+        }
+
+        .action-arrow {
+            margin-left: auto;
+            color: #c9cdd4;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        .action-card:hover .action-arrow {
+            color: #165dff;
+        }
+
+        /* Features */
         .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
         }
 
         .feature-card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
+            background: #fff;
+            border: 1px solid #e5e6eb;
             border-radius: 8px;
-            padding: 24px;
+            padding: 20px 24px;
         }
 
         .feature-card h4 {
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 600;
-            margin-bottom: 12px;
+            color: #1d2129;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
+
+        .feature-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .feature-dot.blue { background: #165dff; }
+        .feature-dot.green { background: #00b42a; }
+        .feature-dot.purple { background: #722ed1; }
+        .feature-dot.orange { background: #ff7d00; }
 
         .feature-card ul {
             list-style: none;
+            padding: 0;
         }
 
         .feature-card li {
             font-size: 13px;
-            color: var(--text-secondary);
-            padding: 6px 0;
-            padding-left: 20px;
+            color: #4e5969;
+            padding: 4px 0;
+            padding-left: 16px;
             position: relative;
+            line-height: 1.6;
         }
 
         .feature-card li::before {
-            content: '›';
+            content: '';
             position: absolute;
             left: 0;
-            color: var(--accent-green);
-            font-weight: bold;
+            top: 11px;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: #c9cdd4;
         }
 
+        /* Footer */
         .welcome-footer {
-            padding: 16px 32px;
-            border-top: 1px solid var(--border-color);
             text-align: center;
-            color: var(--text-secondary);
-            font-size: 13px;
-        }
-
-        .welcome-footer a {
-            color: var(--accent-blue);
-            text-decoration: none;
-        }
-
-        .welcome-footer a:hover {
-            text-decoration: underline;
-        }
-
-        .version-badge {
-            display: inline-block;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 2px 10px;
+            padding: 20px;
+            color: #c9cdd4;
             font-size: 12px;
-            margin-left: 10px;
         }
 
-        .terminal-preview {
-            background: #000;
-            border-radius: 8px;
-            padding: 16px;
-            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
-            font-size: 13px;
-            line-height: 1.6;
-            border: 1px solid var(--border-color);
-            margin-top: 16px;
-        }
-
-        .terminal-line {
-            display: flex;
-            gap: 8px;
-        }
-
-        .terminal-prompt {
-            color: var(--accent-green);
-        }
-
-        .terminal-path {
-            color: var(--accent-blue);
-        }
-
-        .terminal-cmd {
-            color: var(--text-primary);
-        }
-
-        .terminal-output {
-            color: var(--text-secondary);
-            padding-left: 16px;
+        @media (max-width: 900px) {
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .actions-grid { grid-template-columns: repeat(2, 1fr); }
+            .features-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <div class="welcome-header">
-        <h1>OPEN-Panel <span class="version-badge">v1.0.0</span></h1>
-        <p>现代化主机管理与持续交付平台</p>
-    </div>
 
-    <div class="welcome-content">
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon blue">🖥️</div>
-                <div class="stat-info">
-                    <h3>0</h3>
-                    <p>主机总数</p>
-                </div>
+<div class="welcome-header">
+    <div class="welcome-header-left">
+        <h1>OPEN-Panel <span class="version-tag">v1.0</span></h1>
+        <p>轻量级主机管理与持续交付平台</p>
+    </div>
+    <div class="welcome-header-right">
+        <div id="current-time"></div>
+    </div>
+</div>
+
+<div class="welcome-content">
+
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-icon server">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#165dff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon green">✓</div>
-                <div class="stat-info">
-                    <h3>0</h3>
-                    <p>运行中服务</p>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon purple">📦</div>
-                <div class="stat-info">
-                    <h3>0</h3>
-                    <p>镜像总数</p>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon orange">🔄</div>
-                <div class="stat-info">
-                    <h3>0</h3>
-                    <p>构建任务</p>
-                </div>
+            <div>
+                <div class="stat-value" id="stat-server">-</div>
+                <div class="stat-label">主机总数</div>
             </div>
         </div>
+        <div class="stat-card">
+            <div class="stat-icon service">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00b42a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div>
+                <div class="stat-value" id="stat-service">-</div>
+                <div class="stat-label">运行服务</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon docker">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#722ed1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12s-3-4-6-4-6 4-6 4 3 4 6 4 6-4 6-4z"/><circle cx="16" cy="12" r="1.5"/></svg>
+            </div>
+            <div>
+                <div class="stat-value" id="stat-docker">-</div>
+                <div class="stat-label">Docker 节点</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon jenkins">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff7d00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div>
+                <div class="stat-value" id="stat-jenkins">-</div>
+                <div class="stat-label">构建任务</div>
+            </div>
+        </div>
+    </div>
 
-        <h2 class="section-title">快捷入口</h2>
-        <div class="quick-actions">
+    <div class="section">
+        <h3 class="section-title">快捷入口</h3>
+        <div class="actions-grid">
             <a href="server/list.html" class="action-card">
-                <h4>
-                    <span class="action-icon" style="background: rgba(88, 166, 255, 0.15); color: var(--accent-blue);">🖥️</span>
-                    主机管理
-                </h4>
+                <div class="action-card-header">
+                    <span class="action-icon server">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#165dff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                    </span>
+                    <span>主机管理</span>
+                    <span class="action-arrow">&rsaquo;</span>
+                </div>
                 <p>管理和监控所有主机，查看实时状态，执行远程操作</p>
             </a>
             <a href="service/services.html" class="action-card">
-                <h4>
-                    <span class="action-icon" style="background: rgba(63, 185, 80, 0.15); color: var(--accent-green);">⚙️</span>
-                    服务管理
-                </h4>
+                <div class="action-card-header">
+                    <span class="action-icon service">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00b42a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    </span>
+                    <span>服务管理</span>
+                    <span class="action-arrow">&rsaquo;</span>
+                </div>
                 <p>管理应用程序和服务，实现快速部署与动态扩缩容</p>
             </a>
             <a href="jenkins/list.html" class="action-card">
-                <h4>
-                    <span class="action-icon" style="background: rgba(163, 113, 247, 0.15); color: var(--accent-purple);">🔨</span>
-                    构建任务
-                </h4>
+                <div class="action-card-header">
+                    <span class="action-icon jenkins">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#722ed1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                    </span>
+                    <span>构建任务</span>
+                    <span class="action-arrow">&rsaquo;</span>
+                </div>
                 <p>创建和管理持续构建任务，自动化构建流程</p>
             </a>
             <a href="nginx/nginx_nodes.html" class="action-card">
-                <h4>
-                    <span class="action-icon" style="background: rgba(210, 153, 34, 0.15); color: var(--accent-orange);">🌐</span>
-                    Nginx 管理
-                </h4>
+                <div class="action-card-header">
+                    <span class="action-icon nginx">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff7d00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    </span>
+                    <span>Nginx 管理</span>
+                    <span class="action-arrow">&rsaquo;</span>
+                </div>
                 <p>可视化管理 Nginx 配置和节点，简化网站部署</p>
             </a>
         </div>
+    </div>
 
-        <h2 class="section-title">平台特性</h2>
+    <div class="section">
+        <h3 class="section-title">平台特性</h3>
         <div class="features-grid">
             <div class="feature-card">
-                <h4>🚀 高效管理</h4>
+                <h4><span class="feature-dot blue"></span>高效管理</h4>
                 <ul>
                     <li>支持 SSH 终端远程连接</li>
                     <li>批量执行命令和脚本</li>
@@ -363,7 +388,7 @@
                 </ul>
             </div>
             <div class="feature-card">
-                <h4>🔒 安全可靠</h4>
+                <h4><span class="feature-dot green"></span>安全可靠</h4>
                 <ul>
                     <li>支持密钥和密码双认证</li>
                     <li>WebSocket 加密传输</li>
@@ -371,7 +396,7 @@
                 </ul>
             </div>
             <div class="feature-card">
-                <h4>📦 容器支持</h4>
+                <h4><span class="feature-dot purple"></span>容器支持</h4>
                 <ul>
                     <li>Docker 容器一键部署</li>
                     <li>镜像仓库管理</li>
@@ -379,7 +404,7 @@
                 </ul>
             </div>
             <div class="feature-card">
-                <h4>🔧 持续集成</h4>
+                <h4><span class="feature-dot orange"></span>持续集成</h4>
                 <ul>
                     <li>Jenkins 任务集成</li>
                     <li>自动化构建流程</li>
@@ -387,26 +412,61 @@
                 </ul>
             </div>
         </div>
-
-        <h2 class="section-title">快速开始</h2>
-        <div class="terminal-preview">
-            <div class="terminal-line">
-                <span class="terminal-prompt">$</span>
-                <span class="terminal-path">open-panel</span>
-                <span class="terminal-cmd"> init --host your-server-ip</span>
-            </div>
-            <div class="terminal-output">正在连接主机...</div>
-            <div class="terminal-output" style="color: var(--accent-green);">✓ 连接成功</div>
-            <div class="terminal-line" style="margin-top: 8px;">
-                <span class="terminal-prompt">$</span>
-                <span class="terminal-cmd"> ssh root@your-server-ip</span>
-            </div>
-            <div class="terminal-output">正在打开终端...</div>
-        </div>
     </div>
 
-    <div class="welcome-footer">
-        <p>OPEN-Panel 持续交付平台 · <a href="#">文档</a> · <a href="#">关于</a></p>
-    </div>
+</div>
+
+<div class="welcome-footer">OPEN-Panel v1.0</div>
+
+<script src="./static/js/jquery-1.11.3.js"></script>
+<script>
+    // 时钟
+    function updateTime() {
+        var d = new Date();
+        var str = d.getFullYear() + '-' +
+            String(d.getMonth()+1).padStart(2,'0') + '-' +
+            String(d.getDate()).padStart(2,'0') + ' ' +
+            String(d.getHours()).padStart(2,'0') + ':' +
+            String(d.getMinutes()).padStart(2,'0') + ':' +
+            String(d.getSeconds()).padStart(2,'0');
+        document.getElementById('current-time').textContent = str;
+    }
+    updateTime();
+    setInterval(updateTime, 1000);
+
+    // 加载统计
+    $.post('server/list', {getAll: true}, function(data) {
+        if (data.result == 1 && data.data) {
+            document.getElementById('stat-server').textContent = data.data.length;
+        } else {
+            document.getElementById('stat-server').textContent = '0';
+        }
+    }).fail(function() { document.getElementById('stat-server').textContent = '0'; });
+
+    $.post('server/getDockerList', {}, function(data) {
+        if (data.result == 1 && data.data) {
+            document.getElementById('stat-docker').textContent = data.data.length;
+        } else {
+            document.getElementById('stat-docker').textContent = '0';
+        }
+    }).fail(function() { document.getElementById('stat-docker').textContent = '0'; });
+
+    $.post('service/getServiceNode', {}, function(data) {
+        if (data.result == 1 && data.data) {
+            document.getElementById('stat-service').textContent = data.data.length;
+        } else {
+            document.getElementById('stat-service').textContent = '0';
+        }
+    }).fail(function() { document.getElementById('stat-service').textContent = '0'; });
+
+    $.post('jenkins/getJenkinsJobListOffset', {offset: 0, limit: 1}, function(data) {
+        if (data.result == 1 && data.data) {
+            document.getElementById('stat-jenkins').textContent = data.data.length;
+        } else {
+            document.getElementById('stat-jenkins').textContent = '0';
+        }
+    }).fail(function() { document.getElementById('stat-jenkins').textContent = '0'; });
+</script>
+
 </body>
 </html>
